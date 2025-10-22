@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"runtime"
 
 	"github.com/dshills/gogame/engine/core"
 	"github.com/dshills/gogame/engine/graphics"
@@ -146,6 +147,9 @@ func (sf *SmoothFollowBehavior) Update(entity *core.Entity, dt float64) {
 }
 
 func main() {
+	// CRITICAL: SDL requires running on the main OS thread
+	runtime.LockOSThread()
+
 	fmt.Println("=== gogame Engine Demo ===")
 	fmt.Println("This demo showcases all current engine features:")
 	fmt.Println("- Sprite rendering with textures")
@@ -358,7 +362,9 @@ func main() {
 	fmt.Println()
 
 	// Run game loop (blocks until window closed)
-	engine.Run()
+	if err := engine.Run(); err != nil {
+		log.Fatal("Engine error:", err)
+	}
 
 	fmt.Println()
 	fmt.Println("Demo complete!")

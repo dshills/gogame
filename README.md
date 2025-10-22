@@ -50,12 +50,16 @@ package main
 
 import (
     "log"
+    "runtime"
     "github.com/dshills/gogame/engine/core"
     "github.com/dshills/gogame/engine/graphics"
     "github.com/dshills/gogame/engine/math"
 )
 
 func main() {
+    // CRITICAL: SDL requires running on the main OS thread
+    runtime.LockOSThread()
+
     // Create engine with 800x600 window
     eng, err := core.NewEngine("My Game", 800, 600, false)
     if err != nil {
@@ -81,7 +85,9 @@ func main() {
     scene.AddEntity(player)
 
     // Run game loop
-    eng.Run()
+    if err := eng.Run(); err != nil {
+        log.Fatal(err)
+    }
 }
 ```
 

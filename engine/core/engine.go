@@ -22,12 +22,15 @@ type Engine struct {
 
 // NewEngine creates a new game engine instance
 //
+// IMPORTANT: Must be called from the main OS thread. Call runtime.LockOSThread()
+// in your main() function before calling NewEngine.
+//
 // Parameters:
 //
 //	title: Window title
 //	width: Window width in pixels
 //	height: Window height in pixels
-//	fullscreen: Start in fullscreen mode
+//	fullscreen: Start in fullscreen mode (uses desktop resolution)
 //
 // Returns:
 //
@@ -36,9 +39,16 @@ type Engine struct {
 //
 // Example:
 //
-//	engine, err := core.NewEngine("My Game", 800, 600, false)
-//	if err != nil {
-//	    log.Fatal(err)
+//	import "runtime"
+//
+//	func main() {
+//	    runtime.LockOSThread() // CRITICAL: SDL requires main thread
+//	    engine, err := core.NewEngine("My Game", 800, 600, false)
+//	    if err != nil {
+//	        log.Fatal(err)
+//	    }
+//	    defer engine.Shutdown()
+//	    // ...
 //	}
 func NewEngine(title string, width, height int, fullscreen bool) (*Engine, error) {
 	// Initialize SDL
@@ -49,7 +59,8 @@ func NewEngine(title string, width, height int, fullscreen bool) (*Engine, error
 	// Create window
 	windowFlags := sdl.WINDOW_SHOWN
 	if fullscreen {
-		windowFlags |= sdl.WINDOW_FULLSCREEN
+		// Use desktop fullscreen for smoother mode switching
+		windowFlags |= sdl.WINDOW_FULLSCREEN_DESKTOP
 	}
 
 	window, err := sdl.CreateWindow(
@@ -129,21 +140,37 @@ func (e *Engine) GetScene() *Scene {
 
 // Run starts the game loop (blocking)
 //
+// IMPORTANT: Must be called from the main OS thread. Call runtime.LockOSThread()
+// in your main() function before creating the engine.
+//
 // Behavior:
 //   - Runs until window closed or Stop() called
 //   - Fixed 60 FPS update rate
 //   - Variable rendering rate (vsync if enabled)
 //   - Calls scene Update() and Render() each frame
+//   - Returns error if rendering fails
 //
 // Example:
 //
-//	engine.Run()  // Blocks until game ends
-func (e *Engine) Run() {
+//	import "runtime"
+//
+//	func main() {
+//	    runtime.LockOSThread() // Required for SDL
+//	    engine, _ := core.NewEngine("Game", 800, 600, false)
+//	    defer engine.Shutdown()
+//	    if err := engine.Run(); err != nil {
+//	        log.Fatal(err)
+//	    }
+//	}
+func (e *Engine) Run() error {
 	if !e.initialized {
-		return
+		return nil
 	}
 
 	e.running = true
+	defer func() { e.running = false }()
+
+	const maxUpdateSteps = 8 // Prevent spiral of death
 
 	for e.running {
 		// Handle SDL events
@@ -151,33 +178,39 @@ func (e *Engine) Run() {
 			break
 		}
 
-		// Update with fixed timestep
-		if e.scene != nil {
-			updateCount, dt := e.time.Tick()
-			for i := 0; i < updateCount; i++ {
-				e.scene.Update(dt)
-			}
+		// Prevent busy loop when no scene is active
+		if e.scene == nil {
+			sdl.Delay(1) // Sleep 1ms to avoid maxing CPU
+			continue
+		}
+
+		// Update with fixed timestep (capped to prevent spiral of death)
+		updateCount, dt := e.time.Tick()
+		if updateCount > maxUpdateSteps {
+			updateCount = maxUpdateSteps
+		}
+
+		for i := 0; i < updateCount; i++ {
+			e.scene.Update(dt)
 		}
 
 		// Render
-		if e.scene != nil {
-			// Clear screen with background color
-			bgColor := e.scene.GetBackgroundColor()
-			if err := e.renderer.Clear(bgColor); err != nil {
-				fmt.Printf("Render error: %v\n", err)
-				break
-			}
-
-			// Render scene
-			if err := e.scene.Render(e.renderer); err != nil {
-				fmt.Printf("Render error: %v\n", err)
-				break
-			}
-
-			// Present frame
-			e.renderer.Present()
+		// Clear screen with background color
+		bgColor := e.scene.GetBackgroundColor()
+		if err := e.renderer.Clear(bgColor); err != nil {
+			return fmt.Errorf("failed to clear screen: %w", err)
 		}
+
+		// Render scene
+		if err := e.scene.Render(e.renderer); err != nil {
+			return fmt.Errorf("failed to render scene: %w", err)
+		}
+
+		// Present frame
+		e.renderer.Present()
 	}
+
+	return nil
 }
 
 // handleEvents processes SDL events and returns false if should quit
