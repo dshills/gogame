@@ -2,7 +2,7 @@ package graphics
 
 import gamemath "github.com/dshills/gogame/engine/math"
 
-// Camera defines view transformation from world to screen space
+// Camera defines view transformation from world to screen space.
 type Camera struct {
 	Position     gamemath.Vector2 // Camera center in world space
 	Zoom         float64          // Zoom factor (1.0 = normal, >1.0 = zoomed in)
@@ -24,7 +24,7 @@ func NewCamera() *Camera {
 	}
 }
 
-// SetScreenSize updates the camera's screen dimensions (called by engine on resize)
+// SetScreenSize updates the camera's screen dimensions (called by engine on resize).
 func (c *Camera) SetScreenSize(width, height int) {
 	c.screenWidth = width
 	c.screenHeight = height

@@ -5,7 +5,7 @@ import (
 	gamemath "github.com/dshills/gogame/engine/math"
 )
 
-// Scene represents a container for entities (game level or screen)
+// Scene represents a container for entities (game level or screen).
 type Scene struct {
 	entities         []*Entity
 	nextEntityID     uint64
@@ -77,7 +77,7 @@ func (s *Scene) RemoveEntity(id uint64) {
 	s.entitiesToRemove = append(s.entitiesToRemove, id)
 }
 
-// processDeferredRemovals removes queued entities after update phase
+// processDeferredRemovals removes queued entities after update phase.
 func (s *Scene) processDeferredRemovals() {
 	if len(s.entitiesToRemove) == 0 {
 		return
@@ -179,12 +179,12 @@ func (s *Scene) SetBackgroundColor(color gamemath.Color) {
 	s.backgroundColor = color
 }
 
-// GetBackgroundColor returns the current background color
+// GetBackgroundColor returns the current background color.
 func (s *Scene) GetBackgroundColor() gamemath.Color {
 	return s.backgroundColor
 }
 
-// Update updates all active entities
+// Update updates all active entities.
 func (s *Scene) Update(dt float64) {
 	for _, entity := range s.entities {
 		if entity.Active {
@@ -195,7 +195,7 @@ func (s *Scene) Update(dt float64) {
 	s.processDeferredRemovals()
 }
 
-// Render renders all active entities
+// Render renders all active entities.
 func (s *Scene) Render(renderer *graphics.Renderer) error {
 	// Sort entities by layer for correct draw order (lower layers first)
 	// For now, we'll render in the order they were added (simple implementation)

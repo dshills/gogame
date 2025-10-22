@@ -7,19 +7,19 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-// Renderer wraps SDL2 rendering operations
+// Renderer wraps SDL2 rendering operations.
 type Renderer struct {
 	sdlRenderer *sdl.Renderer
 }
 
-// NewRenderer creates a renderer from an SDL renderer
+// NewRenderer creates a renderer from an SDL renderer.
 func NewRenderer(sdlRenderer *sdl.Renderer) *Renderer {
 	return &Renderer{
 		sdlRenderer: sdlRenderer,
 	}
 }
 
-// Clear clears the screen with the specified color
+// Clear clears the screen with the specified color.
 func (r *Renderer) Clear(color gamemath.Color) error {
 	if err := r.sdlRenderer.SetDrawColor(color.R, color.G, color.B, color.A); err != nil {
 		return fmt.Errorf("failed to set draw color: %w", err)
@@ -30,12 +30,12 @@ func (r *Renderer) Clear(color gamemath.Color) error {
 	return nil
 }
 
-// Present presents the rendered frame to the screen
+// Present presents the rendered frame to the screen.
 func (r *Renderer) Present() {
 	r.sdlRenderer.Present()
 }
 
-// DrawSprite renders a sprite at the specified transform with camera transform applied
+// DrawSprite renders a sprite at the specified transform with camera transform applied.
 func (r *Renderer) DrawSprite(sprite *Sprite, transform gamemath.Transform, camera *Camera) error {
 	if sprite == nil || sprite.Texture == nil {
 		return nil // Nothing to render
@@ -102,7 +102,7 @@ func (r *Renderer) DrawSprite(sprite *Sprite, transform gamemath.Transform, came
 	return nil
 }
 
-// Destroy releases renderer resources
+// Destroy releases renderer resources.
 func (r *Renderer) Destroy() error {
 	if r.sdlRenderer != nil {
 		return r.sdlRenderer.Destroy()
@@ -110,7 +110,7 @@ func (r *Renderer) Destroy() error {
 	return nil
 }
 
-// GetSDLRenderer returns the underlying SDL renderer (for internal use)
+// GetSDLRenderer returns the underlying SDL renderer (for internal use).
 func (r *Renderer) GetSDLRenderer() *sdl.Renderer {
 	return r.sdlRenderer
 }

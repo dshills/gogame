@@ -5,7 +5,7 @@ import (
 	gamemath "github.com/dshills/gogame/engine/math"
 )
 
-// Behavior defines custom per-frame logic for an entity
+// Behavior defines custom per-frame logic for an entity.
 type Behavior interface {
 	// Update is called every frame
 	//
@@ -22,7 +22,7 @@ type Behavior interface {
 	Update(entity *Entity, dt float64)
 }
 
-// Entity represents a game object with position, optional visuals, and behavior
+// Entity represents a game object with position, optional visuals, and behavior.
 type Entity struct {
 	ID        uint64              // Unique identifier (assigned by Scene)
 	Active    bool                // Update/render only if true

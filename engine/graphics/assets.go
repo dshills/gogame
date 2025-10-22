@@ -1,3 +1,4 @@
+// Package graphics provides rendering functionality including sprites, textures, cameras, and asset management.
 package graphics
 
 import (
@@ -10,14 +11,14 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-// AssetManager manages texture loading and caching
+// AssetManager manages texture loading and caching.
 type AssetManager struct {
 	renderer *sdl.Renderer
 	textures map[string]*Texture // Cache of loaded textures
 	refCount map[string]int      // Reference counting
 }
 
-// NewAssetManager creates a new asset manager
+// NewAssetManager creates a new asset manager.
 func NewAssetManager(renderer *sdl.Renderer) *AssetManager {
 	return &AssetManager{
 		renderer: renderer,
@@ -60,7 +61,7 @@ func (am *AssetManager) LoadTexture(path string) (*Texture, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load texture: file not found: %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }() // Best effort cleanup for read-only file
 
 	// Decode image
 	img, format, err := image.Decode(file)
@@ -111,7 +112,10 @@ func (am *AssetManager) LoadTexture(path string) (*Texture, error) {
 	}
 
 	// Set blend mode for alpha transparency
-	sdlTexture.SetBlendMode(sdl.BLENDMODE_BLEND)
+	if err := sdlTexture.SetBlendMode(sdl.BLENDMODE_BLEND); err != nil {
+		_ = sdlTexture.Destroy() // Best effort cleanup
+		return nil, fmt.Errorf("failed to set blend mode: %w", err)
+	}
 
 	// Wrap in our Texture type
 	texture := NewTexture(sdlTexture, width, height, path)
@@ -149,17 +153,17 @@ func (am *AssetManager) UnloadTexture(path string) {
 	// Unload if no more references
 	if am.refCount[path] <= 0 {
 		if texture, exists := am.textures[path]; exists {
-			texture.Destroy()
+			_ = texture.Destroy() // Best effort cleanup
 			delete(am.textures, path)
 			delete(am.refCount, path)
 		}
 	}
 }
 
-// Destroy unloads all textures
+// Destroy unloads all textures.
 func (am *AssetManager) Destroy() {
 	for path, texture := range am.textures {
-		texture.Destroy()
+		_ = texture.Destroy() // Best effort cleanup
 		delete(am.textures, path)
 		delete(am.refCount, path)
 	}

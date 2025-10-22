@@ -1,6 +1,7 @@
+// Package math provides mathematical types and operations for game development including vectors, transforms, rectangles, and colors.
 package math
 
-// Color represents an RGBA color with 8-bit channels
+// Color represents an RGBA color with 8-bit channels.
 type Color struct {
 	R uint8 // Red (0-255)
 	G uint8 // Green (0-255)
@@ -8,7 +9,7 @@ type Color struct {
 	A uint8 // Alpha (0-255, 255 = opaque)
 }
 
-// Predefined colors
+// Predefined colors.
 var (
 	White       = Color{255, 255, 255, 255}
 	Black       = Color{0, 0, 0, 255}

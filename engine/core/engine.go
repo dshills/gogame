@@ -1,3 +1,4 @@
+// Package core provides the game engine's core functionality including the engine, scenes, entities, and game loop.
 package core
 
 import (
@@ -7,7 +8,7 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-// Engine is the root game engine managing window, rendering, and game loop
+// Engine is the root game engine managing window, rendering, and game loop.
 type Engine struct {
 	window      *sdl.Window
 	renderer    *graphics.Renderer
@@ -83,7 +84,7 @@ func NewEngine(title string, width, height int, fullscreen bool) (*Engine, error
 		sdl.RENDERER_ACCELERATED|sdl.RENDERER_PRESENTVSYNC,
 	)
 	if err != nil {
-		window.Destroy()
+		_ = window.Destroy() // Best effort cleanup
 		sdl.Quit()
 		return nil, fmt.Errorf("failed to create SDL renderer: %w", err)
 	}
@@ -213,7 +214,7 @@ func (e *Engine) Run() error {
 	return nil
 }
 
-// handleEvents processes SDL events and returns false if should quit
+// handleEvents processes SDL events and returns false if should quit.
 func (e *Engine) handleEvents() bool {
 	for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 		switch evt := event.(type) {
@@ -270,12 +271,12 @@ func (e *Engine) Shutdown() {
 
 	// Destroy renderer
 	if e.renderer != nil {
-		e.renderer.Destroy()
+		_ = e.renderer.Destroy() // Best effort cleanup
 	}
 
 	// Destroy window
 	if e.window != nil {
-		e.window.Destroy()
+		_ = e.window.Destroy() // Best effort cleanup
 	}
 
 	// Quit SDL
@@ -293,12 +294,12 @@ func (e *Engine) Assets() *graphics.AssetManager {
 	return e.assetMgr
 }
 
-// Width returns the window width
+// Width returns the window width.
 func (e *Engine) Width() int {
 	return e.width
 }
 
-// Height returns the window height
+// Height returns the window height.
 func (e *Engine) Height() int {
 	return e.height
 }

@@ -1,3 +1,4 @@
+// Package main provides a comprehensive demo showcasing all gogame engine features.
 package main
 
 import (
@@ -15,7 +16,7 @@ import (
 	gamemath "github.com/dshills/gogame/engine/math"
 )
 
-// generateTestTextures creates simple colored PNG files for the demo
+// generateTestTextures creates simple colored PNG files for the demo.
 func generateTestTextures() error {
 	textures := map[string]color.RGBA{
 		"examples/demo/assets/player.png":      {R: 255, G: 255, B: 255, A: 255}, // White square
@@ -51,10 +52,13 @@ func generateTestTextures() error {
 		}
 
 		if err := png.Encode(file, img); err != nil {
-			file.Close()
+			_ = file.Close() // Best effort cleanup on error path
 			return fmt.Errorf("failed to encode PNG %s: %w", path, err)
 		}
-		file.Close()
+
+		if err := file.Close(); err != nil {
+			return fmt.Errorf("failed to close texture file %s: %w", path, err)
+		}
 
 		fmt.Printf("  Generated texture: %s\n", path)
 	}
@@ -62,7 +66,7 @@ func generateTestTextures() error {
 	return nil
 }
 
-// RotatingBehavior rotates an entity continuously
+// RotatingBehavior rotates an entity continuously.
 type RotatingBehavior struct {
 	RotationSpeed float64 // Degrees per second
 }
@@ -71,7 +75,7 @@ func (rb *RotatingBehavior) Update(entity *core.Entity, dt float64) {
 	entity.Transform.Rotate(rb.RotationSpeed * dt)
 }
 
-// OrbitingBehavior makes an entity orbit around a center point
+// OrbitingBehavior makes an entity orbit around a center point.
 type OrbitingBehavior struct {
 	CenterX      float64
 	CenterY      float64
@@ -86,7 +90,7 @@ func (ob *OrbitingBehavior) Update(entity *core.Entity, dt float64) {
 	entity.Transform.Position.Y = ob.CenterY + math.Sin(ob.CurrentAngle)*ob.Radius
 }
 
-// PulsatingBehavior changes entity alpha to create pulsing effect
+// PulsatingBehavior changes entity alpha to create pulsing effect.
 type PulsatingBehavior struct {
 	Speed        float64
 	CurrentPhase float64
@@ -100,7 +104,7 @@ func (pb *PulsatingBehavior) Update(entity *core.Entity, dt float64) {
 	}
 }
 
-// BouncingBehavior makes entity bounce around the screen
+// BouncingBehavior makes entity bounce around the screen.
 type BouncingBehavior struct {
 	VelocityX    float64
 	VelocityY    float64
@@ -132,13 +136,13 @@ func (bb *BouncingBehavior) Update(entity *core.Entity, dt float64) {
 	}
 }
 
-// SmoothFollowBehavior makes entity smoothly follow another entity
+// SmoothFollowBehavior makes entity smoothly follow another entity.
 type SmoothFollowBehavior struct {
 	Target    *core.Entity
 	Smoothing float64
 }
 
-func (sf *SmoothFollowBehavior) Update(entity *core.Entity, dt float64) {
+func (sf *SmoothFollowBehavior) Update(entity *core.Entity, _ float64) {
 	if sf.Target != nil && sf.Target.Active {
 		// Smooth interpolation toward target
 		entity.Transform.Position.X += (sf.Target.Transform.Position.X - entity.Transform.Position.X) * sf.Smoothing

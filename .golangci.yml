@@ -1,0 +1,226 @@
+# golangci-lint configuration for gogame
+# https://golangci-lint.run/docs/configuration/file/
+
+version: "2"
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+
+  # Which directories to skip
+  skip-dirs:
+    - vendor
+    - .specify
+    - .claude
+
+  # Which files to skip
+  skip-files:
+    - ".*\\.pb\\.go$"
+    - ".*\\.gen\\.go$"
+
+  # Include test files
+  tests: true
+
+  # Build tags to use
+  build-tags:
+    - integration
+
+  # Use Go version from go.mod
+  go: '1.25'
+
+  # Allow multiple linters to run in parallel
+  allow-parallel-runners: true
+
+linters:
+  # Disable all linters by default, then enable specific ones
+  disable-all: true
+
+  enable:
+    # Error checking
+    - errcheck          # Check for unchecked errors
+    - errorlint         # Find code that will cause problems with Go 1.13+ error wrapping
+    - nilerr            # Finds code returning nil even when error is not nil
+
+    # Code quality & complexity
+    - gocyclo           # Computes cyclomatic complexity
+    - gocognit          # Computes cognitive complexity
+    - maintidx          # Measures maintainability index
+
+    # Security
+    # gosec disabled - many false positives for game engine (SDL conversions, asset loading)
+
+    # Style & static analysis
+    - govet             # Official Go tool for static analysis
+    - ineffassign       # Detects ineffectual assignments
+    - unused            # Checks for unused constants, variables, functions and types
+    - staticcheck       # Go vet on steroids, applying ton of static analysis checks
+
+    # Bugs & correctness
+    - bodyclose         # Checks whether HTTP response body is closed successfully
+    - sqlclosecheck     # Checks that sql.Rows and sql.Stmt are closed
+    - rowserrcheck      # Checks whether Err of rows is checked successfully
+    - unconvert         # Remove unnecessary type conversions
+    - unparam           # Reports unused function parameters
+    - wastedassign      # Finds wasted assignment statements
+
+    # Performance
+    - prealloc          # Finds slice declarations that could be preallocated
+
+    # Code clarity
+    - godot             # Check if comments end in a period
+    - misspell          # Finds commonly misspelled English words
+    - revive            # Fast, configurable, extensible, flexible, and beautiful linter for Go
+
+    # Testing
+    - testifylint       # Checks usage of github.com/stretchr/testify
+    - tparallel         # Detects inappropriate usage of t.Parallel() method
+
+linters-settings:
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`
+    check-type-assertions: true
+    # Report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`
+    check-blank: false
+    # List of functions to exclude from checking
+    exclude-functions:
+      - (*github.com/veandco/go-sdl2/sdl.Window).Destroy
+      - (*github.com/veandco/go-sdl2/sdl.Renderer).Destroy
+      - (*github.com/veandco/go-sdl2/sdl.Texture).Destroy
+
+  gocyclo:
+    # Minimal cyclomatic complexity to report
+    # Game logic can be complex, so we allow higher complexity
+    min-complexity: 15
+
+  gocognit:
+    # Minimal cognitive complexity to report
+    min-complexity: 20
+
+  govet:
+    # Enable all analyzers
+    enable-all: true
+    # Disable specific analyzers
+    disable:
+      - fieldalignment  # Too strict for game entity structs
+
+  staticcheck:
+    # Enable all checks
+    checks: ["all"]
+
+  revive:
+    # Minimal confidence to report
+    confidence: 0.8
+    rules:
+      # Enable specific rules
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+      # Disable some rules
+      - name: line-length-limit
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: max-public-structs
+        disabled: true
+      - name: cognitive-complexity
+        disabled: true
+
+  prealloc:
+    # Report preallocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them
+    simple: true
+    range-loops: true
+    for-loops: true
+
+  misspell:
+    # Correct spellings using locale preferences for US or UK
+    locale: US
+
+  godot:
+    # Comments to check
+    scope: declarations
+    # List of regexps for excluding particular comment lines from check
+    exclude:
+      # Exclude SDL-related comments
+      - "^SDL"
+    # Check that each sentence ends with a period
+    period: true
+    # Check that each sentence starts with a capital letter
+    capital: true
+
+  testifylint:
+    # Enable all checkers
+    enable-all: true
+
+issues:
+  # Maximum issues count per one linter
+  # Set to 0 to disable limit
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text
+  # Set to 0 to disable limit
+  max-same-issues: 0
+
+  # Show only new issues created after git revision or from branch merge base
+  # new-from-rev: origin/main
+
+  # Exclude issues from test files
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test.go
+      linters:
+        - gocyclo
+        - errcheck
+        - gocognit
+        - maintidx
+
+    # Exclude some linters from running on examples
+    - path: examples/
+      linters:
+        - errcheck  # Examples may simplify error handling for clarity
+
+    # Exclude godot checks for inline comments
+    - linters:
+        - godot
+      text: "Comment should end in a period"
+      source: "^\\s*//"
+
+  # Independently of option `exclude` golangci-lint uses default exclude patterns
+  exclude-use-default: false
+
+output:
+  # Output format
+  format: colored-line-number
+
+  # Print lines of code with issue
+  print-issued-lines: true
+
+  # Print linter name in the end of issue text
+  print-linter-name: true
+
+  # Make issues output unique by line
+  uniq-by-line: false
+
+  # Sort results by: filepath, line and column
+  sort-results: true

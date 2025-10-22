@@ -7,7 +7,7 @@ import "time"
 // Based on "Fix Your Timestep" pattern:
 // - Fixed update rate (60 FPS = 16.67ms per update)
 // - Variable render rate (as fast as possible with vsync)
-// - Accumulator prevents spiral of death
+// - Accumulator prevents spiral of death.
 type Time struct {
 	dt           float64   // Fixed delta time in seconds (1/60 = 0.016667)
 	accumulator  float64   // Time accumulated since last update
@@ -16,7 +16,7 @@ type Time struct {
 	maxFrameTime float64   // Maximum frame time to prevent spiral of death (0.25 seconds)
 }
 
-// NewTime creates a new time manager with 60 FPS target
+// NewTime creates a new time manager with 60 FPS target.
 func NewTime() *Time {
 	targetFPS := 60.0
 	return &Time{
@@ -64,12 +64,12 @@ func (t *Time) Tick() (updateCount int, dt float64) {
 	return updateCount, t.dt
 }
 
-// DeltaTime returns the fixed delta time in seconds
+// DeltaTime returns the fixed delta time in seconds.
 func (t *Time) DeltaTime() float64 {
 	return t.dt
 }
 
-// FPS returns the target FPS
+// FPS returns the target FPS.
 func (t *Time) FPS() float64 {
 	return t.targetFPS
 }

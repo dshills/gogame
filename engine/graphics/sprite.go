@@ -2,7 +2,7 @@ package graphics
 
 import gamemath "github.com/dshills/gogame/engine/math"
 
-// Sprite represents a visual representation attached to entities
+// Sprite represents a visual representation attached to entities.
 type Sprite struct {
 	Texture    *Texture           // Loaded texture (via AssetManager)
 	SourceRect gamemath.Rectangle // Region of texture to render (for sprite sheets)

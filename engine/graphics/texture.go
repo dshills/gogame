@@ -2,7 +2,7 @@ package graphics
 
 import "github.com/veandco/go-sdl2/sdl"
 
-// Texture represents a loaded image texture
+// Texture represents a loaded image texture.
 type Texture struct {
 	sdlTexture *sdl.Texture // SDL texture handle (internal)
 	Width      int          // Texture width in pixels
@@ -10,7 +10,7 @@ type Texture struct {
 	Path       string       // Source file path
 }
 
-// NewTexture creates a new texture wrapper around an SDL texture
+// NewTexture creates a new texture wrapper around an SDL texture.
 func NewTexture(sdlTexture *sdl.Texture, width, height int, path string) *Texture {
 	return &Texture{
 		sdlTexture: sdlTexture,
@@ -20,7 +20,7 @@ func NewTexture(sdlTexture *sdl.Texture, width, height int, path string) *Textur
 	}
 }
 
-// Destroy releases the SDL texture resources
+// Destroy releases the SDL texture resources.
 func (t *Texture) Destroy() error {
 	if t.sdlTexture != nil {
 		return t.sdlTexture.Destroy()
@@ -28,7 +28,7 @@ func (t *Texture) Destroy() error {
 	return nil
 }
 
-// GetSDLTexture returns the underlying SDL texture (for internal use)
+// GetSDLTexture returns the underlying SDL texture (for internal use).
 func (t *Texture) GetSDLTexture() *sdl.Texture {
 	return t.sdlTexture
 }

@@ -1,3 +1,4 @@
+// Package main provides a minimal example demonstrating basic gogame engine usage.
 package main
 
 import (
