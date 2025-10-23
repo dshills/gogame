@@ -20,8 +20,12 @@ A fully-featured space shooter demonstrating all capabilities of the gogame engi
 ### Running the Game
 
 ```bash
-cd examples/space-battle
-go run main.go
+# From project root
+go run examples/space-battle/main.go
+
+# Or build and run
+go build -o ./build/space-battle ./examples/space-battle
+./build/space-battle
 ```
 
 ### Controls
@@ -193,7 +197,12 @@ func (g *Game) Update(dt float64) {
 Game includes an asset generator that creates PNG images programmatically:
 
 ```bash
-go run generate_assets.go
+# From examples/space-battle directory
+cd examples/space-battle
+go run tools/generate_assets.go
+
+# Or from project root
+go run examples/space-battle/tools/generate_assets.go
 ```
 
 **Generated Assets:**
@@ -228,8 +237,9 @@ const (
 ```
 space-battle/
 ├── main.go              # Main game logic
-├── generate_assets.go   # PNG asset generator
 ├── README.md           # This file
+├── tools/              # Development tools
+│   └── generate_assets.go  # PNG asset generator
 └── assets/             # Generated assets
     ├── player.png      # Player ship sprite
     ├── enemy.png       # Enemy ship sprite
@@ -378,7 +388,7 @@ This demo teaches:
 If you see texture loading errors:
 ```bash
 cd examples/space-battle
-go run generate_assets.go
+go run tools/generate_assets.go
 go run main.go
 ```
 
