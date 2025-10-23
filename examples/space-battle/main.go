@@ -51,6 +51,7 @@ type Game struct {
 	inputMgr            *input.InputManager
 	state               GameState
 	score               int
+	escapedEnemies      int
 	player              *core.Entity
 	enemies             []*core.Entity
 	bullets             []*core.Entity
@@ -58,6 +59,7 @@ type Game struct {
 	lastShot            float64
 	enemySpawnTimer     float64
 	starSpawnTimer      float64
+	statusUpdateTimer   float64
 	gameTime            float64
 	playerTexture       *graphics.Texture
 	enemyTexture        *graphics.Texture
@@ -122,9 +124,9 @@ func (eb *EnemyBehavior) Update(entity *core.Entity, dt float64) {
 	// Move down
 	entity.Transform.Position.Y += EnemySpeed * dt
 
-	// Remove if off screen
+	// Remove if off screen (enemy escaped)
 	if entity.Transform.Position.Y > ScreenHeight+50 {
-		eb.game.removeEnemy(entity)
+		eb.game.onEnemyEscaped(entity)
 	}
 }
 
@@ -189,7 +191,10 @@ func (g *Game) Initialize() error {
 	log.Println("  R - Restart (when game over)")
 	log.Println("  ESC - Quit")
 	log.Println()
-	log.Println("Objective: Destroy enemies and survive!")
+	log.Println("Objective:")
+	log.Println("  • Destroy enemies to score points (+10 each)")
+	log.Println("  • Don't let enemies collide with you!")
+	log.Println("  • Don't let 3 enemies escape past you!")
 	log.Println()
 
 	// Setup input bindings
@@ -387,7 +392,39 @@ func (g *Game) onEnemyHit(enemy *core.Entity) {
 	}
 
 	g.removeEnemy(enemy)
-	log.Printf("Enemy destroyed! Score: %d", g.score)
+	log.Printf("✓ Enemy destroyed! Score: %d | Escaped: %d/3", g.score, g.escapedEnemies)
+}
+
+// onEnemyEscaped is called when an enemy passes the player
+func (g *Game) onEnemyEscaped(enemy *core.Entity) {
+	g.escapedEnemies++
+	g.removeEnemy(enemy)
+
+	log.Printf("⚠ Enemy escaped! Score: %d | Escaped: %d/3", g.score, g.escapedEnemies)
+
+	// Check if too many escaped
+	if g.escapedEnemies >= 3 {
+		g.onTooManyEscaped()
+	}
+}
+
+// onTooManyEscaped is called when 3 enemies escape
+func (g *Game) onTooManyEscaped() {
+	log.Println()
+	log.Println("═══════════════════════════════════")
+	log.Println("      GAME OVER!")
+	log.Println("   Too many enemies escaped!")
+	log.Printf("       Final Score: %d", g.score)
+	log.Println("═══════════════════════════════════")
+	log.Println("Press R to restart or ESC to quit")
+	log.Println()
+
+	g.state = StateGameOver
+
+	// Change player color to orange (different from collision death)
+	if g.player.Sprite != nil {
+		g.player.Sprite.SetColor(gamemath.Color{R: 255, G: 150, B: 50, A: 255})
+	}
 }
 
 // onPlayerHit is called when player is hit by an enemy
@@ -472,6 +509,13 @@ func (gmb *GameManagerBehavior) Update(entity *core.Entity, dt float64) {
 			g.spawnStar(-10)
 		}
 	}
+
+	// Status updates every 10 seconds
+	g.statusUpdateTimer += dt
+	if g.statusUpdateTimer >= 10.0 {
+		g.statusUpdateTimer = 0
+		log.Printf("📊 Status - Score: %d | Escaped: %d/3 | Time: %.0fs", g.score, g.escapedEnemies, g.gameTime)
+	}
 }
 
 // restart restarts the game
@@ -498,6 +542,7 @@ func (g *Game) restart() {
 	// Reset game state
 	g.state = StatePlaying
 	g.score = 0
+	g.escapedEnemies = 0
 	g.gameTime = 0
 	g.lastShot = 0
 	g.enemySpawnTimer = 0

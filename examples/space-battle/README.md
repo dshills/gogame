@@ -39,14 +39,18 @@ go build -o ./build/space-battle ./examples/space-battle
 
 ### Objective
 
-- Destroy enemy ships by shooting them with bullets
-- Avoid colliding with enemy ships
-- Survive as long as possible and maximize your score
-- Each enemy destroyed awards **10 points**
+- **Destroy enemies** by shooting them with bullets → **+10 points each**
+- **Avoid collisions** with enemy ships → Game over on hit
+- **Don't let enemies escape** → Game over if **3 enemies** pass you
+- Survive as long as possible and maximize your score!
 
 ### Game Over
 
-When your ship collides with an enemy:
+The game ends when:
+1. **Your ship collides with an enemy** (player turns red)
+2. **3 enemies escape past you** (player turns orange)
+
+When game over occurs:
 - Game pauses
 - Your final score is displayed
 - Press **R** to restart or **ESC** to quit
@@ -55,7 +59,33 @@ When your ship collides with an enemy:
 
 ### Game Systems
 
-#### 1. **Player System**
+#### 1. **Score System**
+Real-time score tracking displayed in console:
+- **+10 points** for each enemy destroyed
+- **Escaped counter** shows enemies that passed (0-3)
+- **Status updates** every 10 seconds showing score, escaped count, and time
+- **Console feedback** on every event (destroy, escape, game over)
+
+```go
+// Score tracking
+g.score += 10  // On enemy destroyed
+
+// Escape tracking
+g.escapedEnemies++
+if g.escapedEnemies >= 3 {
+    g.onTooManyEscaped()  // Game over
+}
+```
+
+**Visual Feedback:**
+- ✓ Green checkmark when enemy destroyed
+- ⚠ Warning icon when enemy escapes
+- 📊 Status updates every 10 seconds
+- Different player colors for different death types:
+  * Red = Collision with enemy
+  * Orange = Too many escaped
+
+#### 2. **Player System**
 - **PlayerController** behavior handles WASD/Arrow key input
 - Smooth movement with delta time
 - Screen bounds collision
@@ -234,8 +264,16 @@ const (
     StarSpawnInterval  = 0.1  // Seconds between stars
     MaxStars           = 50   // Maximum background stars
     StarSpeed          = 50.0 // Star movement speed
+
+    MaxEscapedEnemies = 3     // Game over when this many escape
 )
 ```
+
+**Difficulty Tuning:**
+- Decrease `EnemySpawnInterval` → More enemies, harder
+- Increase `EnemySpeed` → Faster enemies, harder
+- Decrease `MaxEscapedEnemies` → Less forgiving, harder
+- Increase `ShootCooldown` → Slower firing, harder
 
 ## Code Structure
 
