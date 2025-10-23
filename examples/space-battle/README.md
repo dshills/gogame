@@ -146,10 +146,15 @@ bullet.OnCollisionEnter = func(self, other *core.Entity) {
 }
 ```
 
-**Collision Layers:**
-- `CollisionLayerPlayer = 1` - Player ship
-- `CollisionLayerEnemy = 2` - Enemy ships
-- `CollisionLayerBullet = 4` - Player bullets
+**Collision Layers (bit positions):**
+- `CollisionLayerPlayer = 0` - Player ship (bitmask 0x01)
+- `CollisionLayerEnemy = 1` - Enemy ships (bitmask 0x02)
+- `CollisionLayerBullet = 2` - Player bullets (bitmask 0x04)
+
+**Collision Masks (what each layer collides with):**
+- Player: `(1 << CollisionLayerEnemy)` = 0x02 - Collides with enemies
+- Enemy: `(1 << CollisionLayerPlayer) | (1 << CollisionLayerBullet)` = 0x05 - Collides with player and bullets
+- Bullet: `(1 << CollisionLayerEnemy)` = 0x02 - Collides with enemies
 
 #### 6. **Game State Management**
 

@@ -30,9 +30,10 @@ const (
 	MaxStars           = 50   // Maximum number of background stars
 	StarSpeed          = 50.0 // Pixels per second
 
-	CollisionLayerPlayer = 1
-	CollisionLayerEnemy  = 2
-	CollisionLayerBullet = 4
+	// Collision layers (bit positions, not bitmasks)
+	CollisionLayerPlayer = 0 // Bit 0 → bitmask 0x01
+	CollisionLayerEnemy  = 1 // Bit 1 → bitmask 0x02
+	CollisionLayerBullet = 2 // Bit 2 → bitmask 0x04
 )
 
 // Game states
@@ -270,7 +271,7 @@ func (g *Game) createPlayer() {
 		Layer:    2,
 	}
 	g.player.Collider.CollisionLayer = CollisionLayerPlayer
-	g.player.Collider.CollisionMask = CollisionLayerEnemy // Collide with enemies only
+	g.player.Collider.CollisionMask = (1 << CollisionLayerEnemy) // Collide with enemies only (bitmask 0x02)
 
 	// Collision callbacks
 	g.player.OnCollisionEnter = func(self, other *core.Entity) {
@@ -310,7 +311,7 @@ func (g *Game) tryShoot() {
 		Layer:    2,
 	}
 	bullet.Collider.CollisionLayer = CollisionLayerBullet
-	bullet.Collider.CollisionMask = CollisionLayerEnemy // Collide with enemies only
+	bullet.Collider.CollisionMask = (1 << CollisionLayerEnemy) // Collide with enemies only (bitmask 0x02)
 
 	// Collision callback
 	bullet.OnCollisionEnter = func(self, other *core.Entity) {
@@ -344,7 +345,7 @@ func (g *Game) spawnEnemy() {
 		Layer:    2,
 	}
 	enemy.Collider.CollisionLayer = CollisionLayerEnemy
-	enemy.Collider.CollisionMask = CollisionLayerPlayer | CollisionLayerBullet // Collide with player and bullets
+	enemy.Collider.CollisionMask = (1 << CollisionLayerPlayer) | (1 << CollisionLayerBullet) // Collide with player and bullets (bitmask 0x05)
 
 	g.enemies = append(g.enemies, enemy)
 	g.scene.AddEntity(enemy)
