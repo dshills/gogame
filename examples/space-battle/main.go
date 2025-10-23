@@ -66,6 +66,8 @@ type Game struct {
 	bulletTexture       *graphics.Texture
 	starTexture         *graphics.Texture
 	playerStartPosition gamemath.Vector2
+	font                *graphics.Font
+	textRenderer        *graphics.TextRenderer
 }
 
 // PlayerController handles player movement and shooting
@@ -161,6 +163,16 @@ func (sb *StarBehavior) Update(entity *core.Entity, dt float64) {
 	}
 }
 
+// ScoreDisplayBehavior renders the score as text (UI overlay)
+type ScoreDisplayBehavior struct {
+	game *Game
+}
+
+func (sdb *ScoreDisplayBehavior) Update(entity *core.Entity, dt float64) {
+	// This behavior doesn't update position, just used as a hook for rendering
+	// The actual rendering will be done via a custom system
+}
+
 // NewGame creates a new game instance
 func NewGame(engine *core.Engine) *Game {
 	return &Game{
@@ -213,10 +225,20 @@ func (g *Game) Initialize() error {
 
 	g.engine.SetScene(g.scene)
 
+	// Load font for text rendering
+	font, err := graphics.LoadFont("/System/Library/Fonts/Helvetica.ttc", 32)
+	if err != nil {
+		return fmt.Errorf("failed to load font: %v", err)
+	}
+	g.font = font
+
+	// Create text renderer
+	sdlRenderer := g.engine.Renderer().GetSDLRenderer()
+	g.textRenderer = graphics.NewTextRenderer(sdlRenderer, font)
+
 	// Load textures
 	assets := g.engine.Assets()
 
-	var err error
 	g.playerTexture, err = assets.LoadTexture("examples/space-battle/assets/player.png")
 	if err != nil {
 		return fmt.Errorf("failed to load player texture: %v", err)
@@ -253,10 +275,38 @@ func (g *Game) Initialize() error {
 		g.spawnStar(rand.Float64() * ScreenHeight)
 	}
 
+	// Set up UI rendering callback
+	g.engine.SetRenderUICallback(func() {
+		g.renderUI()
+	})
+
 	log.Println("Game initialized! Good luck!")
 	log.Println()
 
 	return nil
+}
+
+// renderUI renders the score and UI overlay
+func (g *Game) renderUI() {
+	if g.textRenderer == nil {
+		return
+	}
+
+	// Render score in top-left corner
+	scoreText := fmt.Sprintf("Score: %d", g.score)
+	g.textRenderer.DrawText(scoreText, 20, 20, gamemath.Color{R: 255, G: 255, B: 255, A: 255})
+
+	// Render escaped counter in top-right corner
+	escapedText := fmt.Sprintf("Escaped: %d/3", g.escapedEnemies)
+	width, _, _ := g.textRenderer.MeasureText(escapedText)
+	g.textRenderer.DrawText(escapedText, ScreenWidth-width-20, 20, gamemath.Color{R: 255, G: 200, B: 100, A: 255})
+
+	// If game over, show restart message
+	if g.state == StateGameOver {
+		gameOverText := "GAME OVER - Press R to Restart"
+		width, _, _ := g.textRenderer.MeasureText(gameOverText)
+		g.textRenderer.DrawText(gameOverText, ScreenWidth/2-width/2, ScreenHeight/2, gamemath.Color{R: 255, G: 50, B: 50, A: 255})
+	}
 }
 
 // createPlayer creates the player entity
@@ -479,6 +529,11 @@ type GameManagerBehavior struct {
 func (gmb *GameManagerBehavior) Update(entity *core.Entity, dt float64) {
 	g := gmb.game
 	g.gameTime += dt
+
+	// Update window title with score and stats
+	title := fmt.Sprintf("Space Battle | Score: %d | Escaped: %d/3 | Time: %.0fs",
+		g.score, g.escapedEnemies, g.gameTime)
+	g.engine.SetWindowTitle(title)
 
 	// Check for restart
 	if g.state == StateGameOver {

@@ -7,20 +7,22 @@ import (
 	"github.com/dshills/gogame/engine/graphics"
 	"github.com/dshills/gogame/engine/input"
 	"github.com/veandco/go-sdl2/sdl"
+	"github.com/veandco/go-sdl2/ttf"
 )
 
 // Engine is the root game engine managing window, rendering, and game loop.
 type Engine struct {
-	window      *sdl.Window
-	renderer    *graphics.Renderer
-	scene       *Scene
-	time        *Time
-	inputMgr    *input.InputManager
-	running     bool
-	width       int
-	height      int
-	assetMgr    *graphics.AssetManager
-	initialized bool
+	window       *sdl.Window
+	renderer     *graphics.Renderer
+	scene        *Scene
+	time         *Time
+	inputMgr     *input.InputManager
+	running      bool
+	width        int
+	height       int
+	assetMgr     *graphics.AssetManager
+	initialized  bool
+	renderUIFunc func() // Optional UI rendering callback
 }
 
 // NewEngine creates a new game engine instance
@@ -57,6 +59,12 @@ func NewEngine(title string, width, height int, fullscreen bool) (*Engine, error
 	// Initialize SDL
 	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
 		return nil, fmt.Errorf("failed to initialize SDL: %w", err)
+	}
+
+	// Initialize SDL_ttf for text rendering
+	if err := ttf.Init(); err != nil {
+		sdl.Quit()
+		return nil, fmt.Errorf("failed to initialize SDL_ttf: %w", err)
 	}
 
 	// Create window
@@ -213,6 +221,11 @@ func (e *Engine) Run() error {
 			return fmt.Errorf("failed to render scene: %w", err)
 		}
 
+		// Render UI overlay (if callback set)
+		if e.renderUIFunc != nil {
+			e.renderUIFunc()
+		}
+
 		// Present frame
 		e.renderer.Present()
 
@@ -297,6 +310,9 @@ func (e *Engine) Shutdown() {
 		_ = e.window.Destroy() // Best effort cleanup
 	}
 
+	// Quit SDL_ttf
+	ttf.Quit()
+
 	// Quit SDL
 	sdl.Quit()
 
@@ -335,4 +351,22 @@ func (e *Engine) Width() int {
 // Height returns the window height.
 func (e *Engine) Height() int {
 	return e.height
+}
+
+// SetWindowTitle updates the window title.
+func (e *Engine) SetWindowTitle(title string) {
+	if e.window != nil {
+		e.window.SetTitle(title)
+	}
+}
+
+// Renderer returns the graphics renderer.
+func (e *Engine) Renderer() *graphics.Renderer {
+	return e.renderer
+}
+
+// SetRenderUICallback sets a callback for rendering UI overlays.
+// The callback is called after scene rendering, before Present().
+func (e *Engine) SetRenderUICallback(callback func()) {
+	e.renderUIFunc = callback
 }
