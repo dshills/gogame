@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/dshills/gogame/engine/graphics"
 	gamemath "github.com/dshills/gogame/engine/math"
+	"github.com/dshills/gogame/engine/physics"
 )
 
 // Behavior defines custom per-frame logic for an entity.
@@ -22,15 +23,26 @@ type Behavior interface {
 	Update(entity *Entity, dt float64)
 }
 
+// CollisionCallback is called when collision events occur.
+// Parameters:
+//   - self: The entity this callback is attached to
+//   - other: The entity we collided with
+type CollisionCallback func(self, other *Entity)
+
 // Entity represents a game object with position, optional visuals, and behavior.
 type Entity struct {
-	ID        uint64              // Unique identifier (assigned by Scene)
-	Active    bool                // Update/render only if true
-	Transform gamemath.Transform  // Position, rotation, scale (required)
-	Sprite    *graphics.Sprite    // Optional visual representation
-	Collider  *gamemath.Rectangle // Optional collision bounds (for now, simple rectangle)
-	Behavior  Behavior            // Optional custom update logic
-	Layer     int                 // Z-order (higher renders on top)
+	ID        uint64             // Unique identifier (assigned by Scene)
+	Active    bool               // Update/render only if true
+	Transform gamemath.Transform // Position, rotation, scale (required)
+	Sprite    *graphics.Sprite   // Optional visual representation
+	Collider  *physics.Collider  // Optional collision detection
+	Behavior  Behavior           // Optional custom update logic
+	Layer     int                // Z-order (higher renders on top)
+
+	// Collision callbacks (optional)
+	OnCollisionEnter CollisionCallback // Called when collision starts
+	OnCollisionStay  CollisionCallback // Called while collision continues
+	OnCollisionExit  CollisionCallback // Called when collision ends
 }
 
 // Update updates the entity's transform and behavior
@@ -90,13 +102,7 @@ func (e *Entity) Render(renderer *graphics.Renderer, camera *graphics.Camera) er
 //	}
 func (e *Entity) GetBounds() gamemath.Rectangle {
 	if e.Collider != nil {
-		// Return collider offset by entity position
-		return gamemath.Rectangle{
-			X:      e.Transform.Position.X + e.Collider.X,
-			Y:      e.Transform.Position.Y + e.Collider.Y,
-			Width:  e.Collider.Width,
-			Height: e.Collider.Height,
-		}
+		return e.Collider.GetWorldBounds(e.Transform)
 	}
 
 	// No collider - return zero-size rectangle at entity position
@@ -106,4 +112,24 @@ func (e *Entity) GetBounds() gamemath.Rectangle {
 		Width:  0,
 		Height: 0,
 	}
+}
+
+// GetID returns the entity's unique identifier.
+func (e *Entity) GetID() uint64 {
+	return e.ID
+}
+
+// GetTransform returns the entity's transform.
+func (e *Entity) GetTransform() gamemath.Transform {
+	return e.Transform
+}
+
+// GetCollider returns the entity's collider.
+func (e *Entity) GetCollider() *physics.Collider {
+	return e.Collider
+}
+
+// IsActive returns whether the entity is active.
+func (e *Entity) IsActive() bool {
+	return e.Active
 }

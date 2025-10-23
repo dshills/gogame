@@ -13,15 +13,18 @@ import (
 
 	"github.com/dshills/gogame/engine/core"
 	"github.com/dshills/gogame/engine/graphics"
+	"github.com/dshills/gogame/engine/input"
 	gamemath "github.com/dshills/gogame/engine/math"
+	"github.com/dshills/gogame/engine/physics"
 )
 
 // generateTestTextures creates simple colored PNG files for the demo.
 func generateTestTextures() error {
 	textures := map[string]color.RGBA{
-		"examples/demo/assets/player.png":      {R: 255, G: 255, B: 255, A: 255}, // White square
-		"examples/demo/assets/enemy.png":       {R: 200, G: 50, B: 50, A: 255},   // Red square
-		"examples/demo/assets/collectible.png": {R: 255, G: 215, B: 0, A: 255},   // Gold square
+		"examples/demo/assets/player.png":      {R: 100, G: 200, B: 255, A: 255}, // Light blue
+		"examples/demo/assets/enemy.png":       {R: 200, G: 50, B: 50, A: 255},   // Red
+		"examples/demo/assets/collectible.png": {R: 255, G: 215, B: 0, A: 255},   // Gold
+		"examples/demo/assets/wall.png":        {R: 100, G: 100, B: 100, A: 255}, // Gray
 	}
 
 	for path, col := range textures {
@@ -30,14 +33,14 @@ func generateTestTextures() error {
 			continue
 		}
 
-		// Create a 64x64 image
-		img := image.NewRGBA(image.Rect(0, 0, 64, 64))
+		// Create a 32x32 image
+		img := image.NewRGBA(image.Rect(0, 0, 32, 32))
 
 		// Fill with color (with a border for visual interest)
-		for y := 0; y < 64; y++ {
-			for x := 0; x < 64; x++ {
+		for y := 0; y < 32; y++ {
+			for x := 0; x < 32; x++ {
 				// Create a border
-				if x < 2 || x >= 62 || y < 2 || y >= 62 {
+				if x < 2 || x >= 30 || y < 2 || y >= 30 {
 					img.Set(x, y, color.RGBA{R: 0, G: 0, B: 0, A: 255}) // Black border
 				} else {
 					img.Set(x, y, col)
@@ -52,7 +55,7 @@ func generateTestTextures() error {
 		}
 
 		if err := png.Encode(file, img); err != nil {
-			_ = file.Close() // Best effort cleanup on error path
+			_ = file.Close()
 			return fmt.Errorf("failed to encode PNG %s: %w", path, err)
 		}
 
@@ -66,106 +69,118 @@ func generateTestTextures() error {
 	return nil
 }
 
-// RotatingBehavior rotates an entity continuously.
-type RotatingBehavior struct {
-	RotationSpeed float64 // Degrees per second
+// PlayerController demonstrates input handling with WASD movement.
+type PlayerController struct {
+	Speed         float64
+	InputMgr      *input.InputManager
+	CollectCount  int
+	LastCollision uint64
 }
 
-func (rb *RotatingBehavior) Update(entity *core.Entity, dt float64) {
-	entity.Transform.Rotate(rb.RotationSpeed * dt)
+func (pc *PlayerController) Update(entity *core.Entity, dt float64) {
+	// Movement with input
+	moveSpeed := pc.Speed * dt
+	if pc.InputMgr.ActionHeld(input.ActionMoveUp) {
+		entity.Transform.Position.Y -= moveSpeed
+	}
+	if pc.InputMgr.ActionHeld(input.ActionMoveDown) {
+		entity.Transform.Position.Y += moveSpeed
+	}
+	if pc.InputMgr.ActionHeld(input.ActionMoveLeft) {
+		entity.Transform.Position.X -= moveSpeed
+	}
+	if pc.InputMgr.ActionHeld(input.ActionMoveRight) {
+		entity.Transform.Position.X += moveSpeed
+	}
+
+	// Rotate player sprite to face movement direction
+	if pc.InputMgr.ActionHeld(input.ActionMoveUp) || pc.InputMgr.ActionHeld(input.ActionMoveDown) ||
+		pc.InputMgr.ActionHeld(input.ActionMoveLeft) || pc.InputMgr.ActionHeld(input.ActionMoveRight) {
+		entity.Transform.Rotation += 180 * dt // Spin while moving
+	}
 }
 
-// OrbitingBehavior makes an entity orbit around a center point.
-type OrbitingBehavior struct {
-	CenterX      float64
-	CenterY      float64
-	Radius       float64
-	Speed        float64 // Radians per second
-	CurrentAngle float64
+// EnemyPatrol makes enemies patrol back and forth.
+type EnemyPatrol struct {
+	Speed     float64
+	MinX      float64
+	MaxX      float64
+	Direction float64
 }
 
-func (ob *OrbitingBehavior) Update(entity *core.Entity, dt float64) {
-	ob.CurrentAngle += ob.Speed * dt
-	entity.Transform.Position.X = ob.CenterX + math.Cos(ob.CurrentAngle)*ob.Radius
-	entity.Transform.Position.Y = ob.CenterY + math.Sin(ob.CurrentAngle)*ob.Radius
+func (ep *EnemyPatrol) Update(entity *core.Entity, dt float64) {
+	entity.Transform.Position.X += ep.Direction * ep.Speed * dt
+
+	// Reverse direction at boundaries
+	if entity.Transform.Position.X <= ep.MinX {
+		ep.Direction = 1
+		entity.Transform.Position.X = ep.MinX
+	} else if entity.Transform.Position.X >= ep.MaxX {
+		ep.Direction = -1
+		entity.Transform.Position.X = ep.MaxX
+	}
+
+	// Rotate enemy
+	entity.Transform.Rotation += 90 * dt
 }
 
-// PulsatingBehavior changes entity alpha to create pulsing effect.
-type PulsatingBehavior struct {
+// CollectibleBehavior makes collectibles pulse and rotate.
+type CollectibleBehavior struct {
 	Speed        float64
 	CurrentPhase float64
 }
 
-func (pb *PulsatingBehavior) Update(entity *core.Entity, dt float64) {
-	pb.CurrentPhase += pb.Speed * dt
+func (cb *CollectibleBehavior) Update(entity *core.Entity, dt float64) {
+	cb.CurrentPhase += cb.Speed * dt
+
+	// Pulse scale
+	scaleFactor := 1.0 + 0.2*math.Sin(cb.CurrentPhase)
+	entity.Transform.Scale = gamemath.Vector2{X: scaleFactor, Y: scaleFactor}
+
+	// Rotate
+	entity.Transform.Rotation += 120 * dt
+
+	// Pulse alpha
 	if entity.Sprite != nil {
-		// Pulse alpha between 0.3 and 1.0
-		entity.Sprite.Alpha = 0.65 + 0.35*math.Sin(pb.CurrentPhase)
+		entity.Sprite.Alpha = 0.7 + 0.3*math.Sin(cb.CurrentPhase*2)
 	}
 }
 
-// BouncingBehavior makes entity bounce around the screen.
-type BouncingBehavior struct {
-	VelocityX    float64
-	VelocityY    float64
-	ScreenWidth  float64
-	ScreenHeight float64
-	Size         float64
-}
-
-func (bb *BouncingBehavior) Update(entity *core.Entity, dt float64) {
-	// Update position
-	entity.Transform.Position.X += bb.VelocityX * dt
-	entity.Transform.Position.Y += bb.VelocityY * dt
-
-	// Bounce off walls
-	if entity.Transform.Position.X-bb.Size/2 < 0 || entity.Transform.Position.X+bb.Size/2 > bb.ScreenWidth {
-		bb.VelocityX = -bb.VelocityX
-		entity.Transform.Position.X = gamemath.Vector2{
-			X: math.Max(bb.Size/2, math.Min(bb.ScreenWidth-bb.Size/2, entity.Transform.Position.X)),
-			Y: entity.Transform.Position.Y,
-		}.X
-	}
-
-	if entity.Transform.Position.Y-bb.Size/2 < 0 || entity.Transform.Position.Y+bb.Size/2 > bb.ScreenHeight {
-		bb.VelocityY = -bb.VelocityY
-		entity.Transform.Position.Y = gamemath.Vector2{
-			X: entity.Transform.Position.X,
-			Y: math.Max(bb.Size/2, math.Min(bb.ScreenHeight-bb.Size/2, entity.Transform.Position.Y)),
-		}.Y
-	}
-}
-
-// SmoothFollowBehavior makes entity smoothly follow another entity.
-type SmoothFollowBehavior struct {
-	Target    *core.Entity
-	Smoothing float64
-}
-
-func (sf *SmoothFollowBehavior) Update(entity *core.Entity, _ float64) {
-	if sf.Target != nil && sf.Target.Active {
-		// Smooth interpolation toward target
-		entity.Transform.Position.X += (sf.Target.Transform.Position.X - entity.Transform.Position.X) * sf.Smoothing
-		entity.Transform.Position.Y += (sf.Target.Transform.Position.Y - entity.Transform.Position.Y) * sf.Smoothing
-	}
-}
+// Global reference for collision detection
+var (
+	playerEntity      *core.Entity
+	collectibles      []*core.Entity
+	enemies           []*core.Entity
+	frameCount        int
+	lastCollisionLog  int
+	collectiblesFound int
+)
 
 func main() {
 	// CRITICAL: SDL requires running on the main OS thread
 	runtime.LockOSThread()
 
-	fmt.Println("=== gogame Engine Demo ===")
-	fmt.Println("This demo showcases all current engine features:")
-	fmt.Println("- Sprite rendering with textures")
-	fmt.Println("- Transform operations (position, rotation, scale)")
-	fmt.Println("- Color tinting and alpha blending")
-	fmt.Println("- Sprite flipping (horizontal/vertical)")
-	fmt.Println("- Custom behaviors (rotating, orbiting, pulsating, bouncing)")
-	fmt.Println("- Camera system with smooth follow")
-	fmt.Println("- Entity management (add/remove)")
-	fmt.Println("- Fixed 60 FPS game loop")
+	fmt.Println("╔═══════════════════════════════════════════════════════════╗")
+	fmt.Println("║          gogame Engine - Comprehensive Feature Demo      ║")
+	fmt.Println("╚═══════════════════════════════════════════════════════════╝")
 	fmt.Println()
-	fmt.Println("Close the window to exit.")
+	fmt.Println("This demo showcases ALL engine features:")
+	fmt.Println()
+	fmt.Println("  ✓ Core Game Loop - Fixed 60 FPS with delta time")
+	fmt.Println("  ✓ Entity/Scene Management - Dynamic add/remove")
+	fmt.Println("  ✓ Input Handling - WASD movement with action mapping")
+	fmt.Println("  ✓ Asset Loading - Texture caching and reference counting")
+	fmt.Println("  ✓ Collision Detection - AABB with layer masks")
+	fmt.Println("  ✓ Sprite Rendering - Textures, colors, alpha, transforms")
+	fmt.Println("  ✓ Camera System - World space rendering")
+	fmt.Println()
+	fmt.Println("Controls:")
+	fmt.Println("  WASD / Arrow Keys - Move player (blue square)")
+	fmt.Println("  ESC - Print debug info")
+	fmt.Println()
+	fmt.Println("Objective:")
+	fmt.Println("  Collect all 4 golden collectibles!")
+	fmt.Println("  Avoid the red patrolling enemies!")
 	fmt.Println()
 
 	// Create test assets directory
@@ -173,203 +188,251 @@ func main() {
 		log.Fatal("Failed to create assets directory:", err)
 	}
 
-	// Generate test textures if they don't exist
+	// Generate test textures
 	if err := generateTestTextures(); err != nil {
 		log.Fatal("Failed to generate test textures:", err)
 	}
 
-	// Create engine with 1024x768 window
-	engine, err := core.NewEngine("gogame Feature Demo", 1024, 768, false)
+	// Create engine
+	engine, err := core.NewEngine("gogame Feature Demo - All Systems", 800, 600, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer engine.Shutdown()
 
-	// Create scene with nice gradient-like background
+	// Setup input
+	inputMgr := engine.Input()
+	inputMgr.BindAction(input.ActionMoveUp, input.KeyW, input.KeyArrowUp)
+	inputMgr.BindAction(input.ActionMoveDown, input.KeyS, input.KeyArrowDown)
+	inputMgr.BindAction(input.ActionMoveLeft, input.KeyA, input.KeyArrowLeft)
+	inputMgr.BindAction(input.ActionMoveRight, input.KeyD, input.KeyArrowRight)
+
+	// Create scene
 	scene := core.NewScene()
-	scene.SetBackgroundColor(gamemath.Color{R: 25, G: 25, B: 40, A: 255}) // Dark blue-gray
+	scene.SetBackgroundColor(gamemath.Color{R: 30, G: 30, B: 50, A: 255})
 	engine.SetScene(scene)
 
-	// Load textures
-	playerTexture, err := engine.Assets().LoadTexture("examples/demo/assets/player.png")
-	if err != nil {
-		log.Fatal("Failed to load player texture:", err)
+	// Load textures (demonstrates asset management with reference counting)
+	assets := engine.Assets()
+	playerTexture, _ := assets.LoadTexture("examples/demo/assets/player.png")
+	enemyTexture, _ := assets.LoadTexture("examples/demo/assets/enemy.png")
+	collectibleTexture, _ := assets.LoadTexture("examples/demo/assets/collectible.png")
+	wallTexture, _ := assets.LoadTexture("examples/demo/assets/wall.png")
+
+	// Create player entity (Layer 0 - Player)
+	playerController := &PlayerController{
+		Speed:    250,
+		InputMgr: inputMgr,
 	}
-
-	enemyTexture, err := engine.Assets().LoadTexture("examples/demo/assets/enemy.png")
-	if err != nil {
-		log.Fatal("Failed to load enemy texture:", err)
-	}
-
-	collectibleTexture, err := engine.Assets().LoadTexture("examples/demo/assets/collectible.png")
-	if err != nil {
-		log.Fatal("Failed to load collectible texture:", err)
-	}
-
-	// 1. CENTER ENTITY - Player with smooth rotation
-	playerSprite := graphics.NewSprite(playerTexture)
-	playerSprite.SetColor(gamemath.Color{R: 100, G: 200, B: 255, A: 255}) // Light blue tint
-
-	player := &core.Entity{
+	playerEntity = &core.Entity{
 		Active: true,
 		Transform: gamemath.Transform{
-			Position: gamemath.Vector2{X: 512, Y: 384},
+			Position: gamemath.Vector2{X: 400, Y: 300},
 			Rotation: 0,
-			Scale:    gamemath.Vector2{X: 2.0, Y: 2.0}, // 2x scale
+			Scale:    gamemath.Vector2{X: 1.5, Y: 1.5},
 		},
-		Sprite:   playerSprite,
-		Behavior: &RotatingBehavior{RotationSpeed: 45}, // 45 degrees per second
-		Layer:    5,
+		Sprite:   graphics.NewSprite(playerTexture),
+		Collider: physics.NewCollider(32, 32),
+		Behavior: playerController,
+		Layer:    2,
 	}
-	scene.AddEntity(player)
-	fmt.Println("✓ Created center player entity (rotating, scaled 2x, blue tint)")
+	playerEntity.Collider.CollisionLayer = 0                  // Player layer
+	playerEntity.Collider.CollisionMask = (1 << 1) | (1 << 2) // Collides with enemies and collectibles
+	scene.AddEntity(playerEntity)
+	fmt.Println("✓ Player created (blue, WASD controls, layer 0)")
 
-	// 2. ORBITING ENTITIES - Multiple enemies orbiting the player
-	for i := 0; i < 6; i++ {
-		angle := float64(i) * (2 * math.Pi / 6)
-		enemySprite := graphics.NewSprite(enemyTexture)
+	// Create walls (Layer 3 - Walls)
+	wallPositions := []struct {
+		x, y, w, h float64
+	}{
+		{400, 50, 700, 20},  // Top
+		{400, 550, 700, 20}, // Bottom
+		{50, 300, 20, 500},  // Left
+		{750, 300, 20, 500}, // Right
+		{400, 200, 200, 20}, // Obstacle 1
+		{400, 400, 200, 20}, // Obstacle 2
+	}
 
-		// Each enemy has different color tint
-		colors := []gamemath.Color{
-			{R: 255, G: 100, B: 100, A: 255}, // Red
-			{R: 100, G: 255, B: 100, A: 255}, // Green
-			{R: 255, G: 255, B: 100, A: 255}, // Yellow
-			{R: 255, G: 100, B: 255, A: 255}, // Magenta
-			{R: 100, G: 255, B: 255, A: 255}, // Cyan
-			{R: 255, G: 200, B: 100, A: 255}, // Orange
+	for _, wall := range wallPositions {
+		wallEntity := &core.Entity{
+			Active: true,
+			Transform: gamemath.Transform{
+				Position: gamemath.Vector2{X: wall.x, Y: wall.y},
+				Rotation: 0,
+				Scale:    gamemath.Vector2{X: wall.w / 32, Y: wall.h / 32},
+			},
+			Sprite:   graphics.NewSprite(wallTexture),
+			Collider: physics.NewCollider(32, 32),
+			Layer:    0,
 		}
-		enemySprite.SetColor(colors[i])
+		wallEntity.Collider.CollisionLayer = 3                  // Wall layer
+		wallEntity.Collider.CollisionMask = (1 << 0) | (1 << 1) // Collides with player and enemies
+		scene.AddEntity(wallEntity)
+	}
+	fmt.Println("✓ Walls created (gray, collision layer 3)")
 
+	// Create patrolling enemies (Layer 1 - Enemies)
+	enemyConfigs := []struct {
+		y          float64
+		minX, maxX float64
+		dir        float64
+	}{
+		{150, 150, 650, 1},
+		{300, 200, 600, -1},
+		{450, 150, 650, 1},
+	}
+
+	for i, cfg := range enemyConfigs {
+		enemySprite := graphics.NewSprite(enemyTexture)
 		enemy := &core.Entity{
 			Active: true,
 			Transform: gamemath.Transform{
-				Position: gamemath.Vector2{X: 512, Y: 384},
+				Position: gamemath.Vector2{X: cfg.minX, Y: cfg.y},
 				Rotation: 0,
-				Scale:    gamemath.Vector2{X: 1.0, Y: 1.0},
+				Scale:    gamemath.Vector2{X: 1.2, Y: 1.2},
 			},
-			Sprite: enemySprite,
-			Behavior: &OrbitingBehavior{
-				CenterX:      512,
-				CenterY:      384,
-				Radius:       150,
-				Speed:        0.5 + float64(i)*0.1, // Different speeds
-				CurrentAngle: angle,
+			Sprite:   enemySprite,
+			Collider: physics.NewCollider(32, 32),
+			Behavior: &EnemyPatrol{
+				Speed:     100 + float64(i)*20,
+				MinX:      cfg.minX,
+				MaxX:      cfg.maxX,
+				Direction: cfg.dir,
 			},
-			Layer: 3,
+			Layer: 1,
 		}
+		enemy.Collider.CollisionLayer = 1     // Enemy layer
+		enemy.Collider.CollisionMask = 1 << 0 // Collides with player
 		scene.AddEntity(enemy)
+		enemies = append(enemies, enemy)
 	}
-	fmt.Println("✓ Created 6 orbiting enemies (different colors and speeds)")
+	fmt.Println("✓ Enemies created (red, patrolling, layer 1)")
 
-	// 3. PULSATING COLLECTIBLES - Corners with alpha pulsing
-	corners := []gamemath.Vector2{
-		{X: 100, Y: 100},
-		{X: 924, Y: 100},
-		{X: 100, Y: 668},
-		{X: 924, Y: 668},
+	// Create collectibles (Layer 2 - Collectibles)
+	collectiblePositions := []gamemath.Vector2{
+		{X: 150, Y: 100},
+		{X: 650, Y: 100},
+		{X: 150, Y: 500},
+		{X: 650, Y: 500},
 	}
 
-	for i, pos := range corners {
+	for i, pos := range collectiblePositions {
 		collectibleSprite := graphics.NewSprite(collectibleTexture)
-		collectibleSprite.SetColor(gamemath.Color{R: 255, G: 255, B: 100, A: 255}) // Yellow
-
 		collectible := &core.Entity{
 			Active: true,
 			Transform: gamemath.Transform{
 				Position: pos,
-				Rotation: float64(i * 90), // Each rotated differently
-				Scale:    gamemath.Vector2{X: 1.5, Y: 1.5},
-			},
-			Sprite: collectibleSprite,
-			Behavior: &PulsatingBehavior{
-				Speed:        2.0 + float64(i)*0.5,
-				CurrentPhase: float64(i) * math.Pi / 2, // Offset phases
-			},
-			Layer: 2,
-		}
-		scene.AddEntity(collectible)
-	}
-	fmt.Println("✓ Created 4 pulsating collectibles in corners (alpha animation)")
-
-	// 4. BOUNCING ENTITIES - Multiple bouncing sprites
-	for i := 0; i < 4; i++ {
-		bouncingSprite := graphics.NewSprite(enemyTexture)
-		bouncingSprite.SetColor(gamemath.Color{R: 150, G: 150, B: 255, A: 200}) // Semi-transparent blue
-
-		// Flip some sprites
-		if i%2 == 0 {
-			bouncingSprite.FlipH = true
-		}
-		if i >= 2 {
-			bouncingSprite.FlipV = true
-		}
-
-		bouncer := &core.Entity{
-			Active: true,
-			Transform: gamemath.Transform{
-				Position: gamemath.Vector2{
-					X: 200 + float64(i)*200,
-					Y: 300,
-				},
 				Rotation: 0,
-				Scale:    gamemath.Vector2{X: 1.2, Y: 1.2},
+				Scale:    gamemath.Vector2{X: 1.0, Y: 1.0},
 			},
-			Sprite: bouncingSprite,
-			Behavior: &BouncingBehavior{
-				VelocityX:    100 + float64(i)*50,
-				VelocityY:    -150 + float64(i)*30,
-				ScreenWidth:  1024,
-				ScreenHeight: 768,
-				Size:         64,
+			Sprite:   collectibleSprite,
+			Collider: physics.NewCollider(32, 32),
+			Behavior: &CollectibleBehavior{
+				Speed:        2.0 + float64(i)*0.3,
+				CurrentPhase: float64(i) * math.Pi / 2,
 			},
-			Layer: 4,
+			Layer: 1,
 		}
-		scene.AddEntity(bouncer)
+		collectible.Collider.CollisionLayer = 2     // Collectible layer
+		collectible.Collider.CollisionMask = 1 << 0 // Collides with player
+		collectible.Collider.IsTrigger = true       // Don't block movement
+		scene.AddEntity(collectible)
+		collectibles = append(collectibles, collectible)
 	}
-	fmt.Println("✓ Created 4 bouncing entities (with sprite flipping, semi-transparent)")
+	fmt.Println("✓ Collectibles created (gold, pulsating, layer 2)")
 
-	// 5. FOLLOWER ENTITY - Follows the player smoothly
-	followerSprite := graphics.NewSprite(collectibleTexture)
-	followerSprite.SetColor(gamemath.Color{R: 255, G: 150, B: 255, A: 180}) // Purple, semi-transparent
-
-	follower := &core.Entity{
-		Active: true,
-		Transform: gamemath.Transform{
-			Position: gamemath.Vector2{X: 700, Y: 200},
-			Rotation: 0,
-			Scale:    gamemath.Vector2{X: 1.0, Y: 1.0},
-		},
-		Sprite: followerSprite,
-		Behavior: &SmoothFollowBehavior{
-			Target:    player,
-			Smoothing: 0.02, // Smooth interpolation
-		},
-		Layer: 6,
-	}
-	scene.AddEntity(follower)
-	fmt.Println("✓ Created follower entity (smoothly follows player)")
-
-	// 6. CAMERA - Set up camera to follow the player with smooth interpolation
+	// Setup camera
 	camera := scene.Camera()
-	camera.Position = gamemath.Vector2{X: 512, Y: 384}
+	camera.Position = gamemath.Vector2{X: 400, Y: 300}
 	camera.Zoom = 1.0
-	fmt.Println("✓ Camera configured (centered)")
 
 	fmt.Println()
-	fmt.Println("Demo running! Features active:")
-	fmt.Println("  - 1 rotating player (center, blue tint, 2x scale)")
-	fmt.Println("  - 6 orbiting enemies (rainbow colors)")
-	fmt.Println("  - 4 pulsating collectibles (corners, alpha animation)")
-	fmt.Println("  - 4 bouncing entities (flipped sprites)")
-	fmt.Println("  - 1 smooth follower (purple, follows player)")
-	fmt.Println("  - Total: 16 active entities")
+	fmt.Println("═══════════════════════════════════════════════════════════")
+	fmt.Println("Demo running! Move with WASD and collect golden items!")
+	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println()
 
-	// Run game loop (blocks until window closed)
+	// Wrap player behavior to detect collisions
+	originalBehavior := playerEntity.Behavior
+	playerEntity.Behavior = BehaviorFunc(func(entity *core.Entity, dt float64) {
+		// Update original behavior
+		if originalBehavior != nil {
+			originalBehavior.Update(entity, dt)
+		}
+
+		// Check collisions every frame
+		frameCount++
+
+		// Check ESC for debug info
+		if inputMgr.KeyPressed(input.KeyEscape) {
+			fmt.Println()
+			fmt.Println("═══ DEBUG INFO ═══")
+			fmt.Printf("Player Position: (%.0f, %.0f)\n", entity.Transform.Position.X, entity.Transform.Position.Y)
+			fmt.Printf("Collectibles Found: %d / %d\n", collectiblesFound, len(collectiblePositions))
+			fmt.Printf("Active Entities: %d\n", len(scene.GetAllEntities()))
+			fmt.Println("═══════════════════")
+			fmt.Println()
+		}
+
+		// Check collisions with collectibles
+		for i, collectible := range collectibles {
+			if !collectible.Active {
+				continue
+			}
+
+			if entity.Collider.Intersects(collectible.GetCollider(), entity.Transform, collectible.Transform) {
+				// Collect it!
+				collectible.Active = false
+				scene.RemoveEntity(collectible.ID)
+				collectiblesFound++
+
+				fmt.Printf("✨ Collectible %d/%d found! ", collectiblesFound, len(collectiblePositions))
+				if collectiblesFound == len(collectiblePositions) {
+					fmt.Println("🎉 ALL COLLECTIBLES FOUND! You win!")
+				} else {
+					fmt.Printf("%d remaining.\n", len(collectiblePositions)-collectiblesFound)
+				}
+
+				// Remove from tracking
+				collectibles[i] = collectibles[len(collectibles)-1]
+				collectibles = collectibles[:len(collectibles)-1]
+			}
+		}
+
+		// Check collisions with enemies (every 30 frames to avoid spam)
+		if frameCount%30 == 0 {
+			for _, enemy := range enemies {
+				if !enemy.Active {
+					continue
+				}
+
+				if entity.Collider.Intersects(enemy.GetCollider(), entity.Transform, enemy.Transform) {
+					if lastCollisionLog != frameCount {
+						fmt.Printf("💥 COLLISION with enemy at (%.0f, %.0f)! Watch out!\n",
+							enemy.Transform.Position.X, enemy.Transform.Position.Y)
+						lastCollisionLog = frameCount
+					}
+				}
+			}
+		}
+	})
+
+	// Run game loop
 	if err := engine.Run(); err != nil {
 		log.Fatal("Engine error:", err)
 	}
 
 	fmt.Println()
+	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println("Demo complete!")
+	fmt.Printf("Final Score: %d / %d collectibles found\n", collectiblesFound, len(collectiblePositions))
+	fmt.Println("═══════════════════════════════════════════════════════════")
+	fmt.Println()
+}
+
+// BehaviorFunc adapter to wrap functions as Behaviors.
+type BehaviorFunc func(entity *core.Entity, dt float64)
+
+func (f BehaviorFunc) Update(entity *core.Entity, dt float64) {
+	f(entity, dt)
 }

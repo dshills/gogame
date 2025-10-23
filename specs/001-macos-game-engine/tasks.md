@@ -94,16 +94,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T028 [P] [US2] Implement Entity type in engine/entity/entity.go (ID, Active, Transform, Sprite, Collider, Behavior, Layer)
-- [ ] T029 [P] [US2] Implement Behavior interface in engine/entity/behavior.go (Update method signature)
-- [ ] T030 [US2] Implement Scene.AddEntity() in engine/core/scene.go (assign ID, append to entities slice, return ID)
-- [ ] T031 [US2] Implement Scene.RemoveEntity() in engine/core/scene.go (linear search, swap-remove for O(n) deletion)
-- [ ] T032 [US2] Implement Scene.GetEntity() in engine/core/scene.go (linear search by ID, return *Entity or nil)
-- [ ] T033 [US2] Implement Entity.Update() in engine/entity/entity.go (call Behavior.Update if non-nil)
-- [ ] T034 [US2] Implement Entity.Render() in engine/entity/entity.go (render Sprite if non-nil, apply transform)
-- [ ] T035 [US2] Integrate entity update into Scene.Update() in engine/core/scene.go (iterate entities, call Update(dt))
-- [ ] T036 [US2] Integrate entity rendering into Scene.Render() in engine/core/scene.go (sort by layer, iterate, render)
-- [ ] T037 [US2] Create moving sprite example in examples/moving/main.go (entity with velocity behavior)
+- [x] T028 [P] [US2] Implement Entity type in engine/core/entity.go (ID, Active, Transform, Sprite, Collider, Behavior, Layer)
+- [x] T029 [P] [US2] Implement Behavior interface in engine/core/entity.go (Update method signature)
+- [x] T030 [US2] Implement Scene.AddEntity() in engine/core/scene.go (assign ID, append to entities slice, return ID)
+- [x] T031 [US2] Implement Scene.RemoveEntity() in engine/core/scene.go (deferred removal with processDeferredRemovals)
+- [x] T032 [US2] Implement Scene.GetEntity() in engine/core/scene.go (linear search by ID, return *Entity or nil)
+- [x] T033 [US2] Implement Entity.Update() in engine/core/entity.go (call Behavior.Update if non-nil)
+- [x] T034 [US2] Implement Entity.Render() in engine/core/entity.go (render Sprite if non-nil, apply transform)
+- [x] T035 [US2] Integrate entity update into Scene.Update() in engine/core/scene.go (iterate entities, call Update(dt))
+- [x] T036 [US2] Integrate entity rendering into Scene.Render() in engine/core/scene.go (iterate entities, call Render)
+- [x] T037 [US2] Create moving sprite example in examples/moving/main.go (entity with velocity behavior)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -122,19 +122,19 @@
 
 ### Implementation for User Story 3
 
-- [ ] T040 [P] [US3] Define Action type in engine/input/actions.go (Action = int, example actions as constants)
-- [ ] T041 [P] [US3] Define KeyCode constants in engine/input/keycodes.go (wrap SDL scancodes: KeyW, KeySpace, KeyArrowUp, KeyMouseLeft, etc.)
-- [ ] T042 [US3] Implement InputManager type in engine/input/input.go (current/previous state maps, actions map, mouse position)
-- [ ] T043 [US3] Implement InputManager.ActionPressed() in engine/input/input.go (query current && !previous)
-- [ ] T044 [US3] Implement InputManager.ActionReleased() in engine/input/input.go (query !current && previous)
-- [ ] T045 [US3] Implement InputManager.ActionHeld() in engine/input/input.go (query current && previous)
-- [ ] T046 [US3] Implement InputManager.MousePosition() in engine/input/input.go (return mouseX, mouseY)
-- [ ] T047 [US3] Implement InputManager.MouseDelta() in engine/input/input.go (return delta since last frame)
-- [ ] T048 [US3] Implement InputManager.BindAction() in engine/input/input.go (map Action to []KeyCode)
-- [ ] T049 [US3] Implement InputManager.Update() in engine/input/input.go (copy current → previous at frame end)
-- [ ] T050 [US3] Integrate SDL event processing into Engine.Run() in engine/core/engine.go (poll events, update InputManager)
-- [ ] T051 [US3] Add InputManager to Engine in engine/core/engine.go (create during init, expose via Input() getter)
-- [ ] T052 [US3] Create player control example in examples/player-control/main.go (WASD movement with action bindings)
+- [x] T040 [P] [US3] Define Action type in engine/input/actions.go (Action = int, example actions as constants)
+- [x] T041 [P] [US3] Define KeyCode constants in engine/input/keycodes.go (wrap SDL scancodes: KeyW, KeySpace, KeyArrowUp, KeyMouseLeft, etc.)
+- [x] T042 [US3] Implement InputManager type in engine/input/input.go (current/previous state maps, actions map, mouse position)
+- [x] T043 [US3] Implement InputManager.ActionPressed() in engine/input/input.go (query current && !previous)
+- [x] T044 [US3] Implement InputManager.ActionReleased() in engine/input/input.go (query !current && previous)
+- [x] T045 [US3] Implement InputManager.ActionHeld() in engine/input/input.go (query current && previous)
+- [x] T046 [US3] Implement InputManager.MousePosition() in engine/input/input.go (return mouseX, mouseY)
+- [x] T047 [US3] Implement InputManager.MouseDelta() in engine/input/input.go (return delta since last frame)
+- [x] T048 [US3] Implement InputManager.BindAction() in engine/input/input.go (map Action to []KeyCode)
+- [x] T049 [US3] Implement InputManager.Update() in engine/input/input.go (copy current → previous at frame end)
+- [x] T050 [US3] Integrate SDL event processing into Engine.Run() in engine/core/engine.go (poll events, update InputManager)
+- [x] T051 [US3] Add InputManager to Engine in engine/core/engine.go (create during init, expose via Input() getter)
+- [x] T052 [US3] Create player control example in examples/player-control/main.go (WASD movement with action bindings)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently
 
@@ -153,15 +153,15 @@
 
 ### Implementation for User Story 4
 
-- [ ] T055 [US4] Implement AssetManager type in engine/graphics/assets.go (textures map, refCounts map, lruCache)
-- [ ] T056 [US4] Implement AssetManager.LoadTexture() in engine/graphics/assets.go (check cache, load via SDL_image, increment ref count)
-- [ ] T057 [US4] Implement AssetManager.UnloadTexture() in engine/graphics/assets.go (decrement ref, unload if zero, LRU eviction)
-- [ ] T058 [US4] Add SDL_image support to Engine init in engine/core/engine.go (IMG_Init for PNG/JPEG formats)
-- [ ] T059 [US4] Add AssetManager to Engine in engine/core/engine.go (create during init, expose via Assets() getter)
-- [ ] T060 [US4] Update Sprite.NewSprite() in engine/graphics/sprite.go (accept Texture from AssetManager)
-- [ ] T061 [US4] Add error handling for missing files in engine/graphics/assets.go (return clear error per FR-012)
-- [ ] T062 [US4] Create asset loading example in examples/assets/main.go (load player.png and enemy.png, multiple sprites)
-- [ ] T063 [US4] Create example assets: examples/assets/player.png and examples/assets/enemy.png (32x32 PNGs)
+- [x] T055 [US4] Implement AssetManager type in engine/graphics/assets.go (textures map, refCounts map, lruCache)
+- [x] T056 [US4] Implement AssetManager.LoadTexture() in engine/graphics/assets.go (check cache, load via SDL_image, increment ref count)
+- [x] T057 [US4] Implement AssetManager.UnloadTexture() in engine/graphics/assets.go (decrement ref, unload if zero, LRU eviction)
+- [x] T058 [US4] Add SDL_image support to Engine init in engine/core/engine.go (IMG_Init for PNG/JPEG formats)
+- [x] T059 [US4] Add AssetManager to Engine in engine/core/engine.go (create during init, expose via Assets() getter)
+- [x] T060 [US4] Update Sprite.NewSprite() in engine/graphics/sprite.go (accept Texture from AssetManager)
+- [x] T061 [US4] Add error handling for missing files in engine/graphics/assets.go (return clear error per FR-012)
+- [x] T062 [US4] Create asset loading example in examples/assets/main.go (load player.png and enemy.png, multiple sprites)
+- [x] T063 [US4] Create example assets: examples/assets/player.png and examples/assets/enemy.png (32x32 PNGs)
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, AND 4 should all work independently
 
@@ -181,15 +181,15 @@
 
 ### Implementation for User Story 5
 
-- [ ] T067 [P] [US5] Implement Collider type in engine/physics/collider.go (Bounds, Offset, IsTrigger, CollisionLayer, CollisionMask)
-- [ ] T068 [P] [US5] Implement Collider.NewCollider() in engine/physics/collider.go (create with width/height, centered bounds)
-- [ ] T069 [US5] Implement Collider.GetWorldBounds() in engine/physics/collider.go (transform local to world space using entity transform)
-- [ ] T070 [US5] Implement Collider.Intersects() in engine/physics/collider.go (AABB overlap test, check layer masks)
-- [ ] T071 [US5] Implement collision detection system in engine/physics/collision.go (O(n²) broad phase for all entities)
-- [ ] T072 [US5] Add collision detection to Scene.Update() in engine/core/scene.go (call collision system after entity updates)
-- [ ] T073 [US5] Implement Scene.GetEntitiesAt() in engine/core/scene.go (spatial query using collider bounds)
-- [ ] T074 [US5] Add collision callbacks to Entity in engine/entity/entity.go (OnCollisionEnter, OnCollisionStay, OnCollisionExit)
-- [ ] T075 [US5] Create collision example in examples/collision/main.go (player and enemy with collision detection)
+- [x] T067 [P] [US5] Implement Collider type in engine/physics/collider.go (Bounds, Offset, IsTrigger, CollisionLayer, CollisionMask)
+- [x] T068 [P] [US5] Implement Collider.NewCollider() in engine/physics/collider.go (create with width/height, centered bounds)
+- [x] T069 [US5] Implement Collider.GetWorldBounds() in engine/physics/collider.go (transform local to world space using entity transform)
+- [x] T070 [US5] Implement Collider.Intersects() in engine/physics/collider.go (AABB overlap test, check layer masks)
+- [x] T071 [US5] Implement collision detection system in engine/physics/collision.go (O(n²) broad phase for all entities)
+- [x] T072 [US5] Add collision detection to Scene.Update() in engine/core/scene.go (call collision system after entity updates)
+- [x] T073 [US5] Implement Scene.GetEntitiesAt() in engine/core/scene.go (spatial query using collider bounds)
+- [x] T074 [US5] Add collision callbacks to Entity in engine/entity/entity.go (OnCollisionEnter, OnCollisionStay, OnCollisionExit)
+- [x] T075 [US5] Create collision example in examples/collision/main.go (player and enemy with collision detection)
 
 **Checkpoint**: All user stories (P1-P5) are now independently functional
 

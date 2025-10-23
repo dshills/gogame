@@ -23,6 +23,12 @@ func main() {
 	// Create scene
 	scene := core.NewScene()
 	scene.SetBackgroundColor(gamemath.Color{R: 52, G: 152, B: 219, A: 255}) // Sky blue
+
+	// Position camera at center of screen (400, 300 for 800x600 window)
+	// This allows entities positioned around (400, 300) to be visible
+	camera := scene.Camera()
+	camera.Position = gamemath.Vector2{X: 400, Y: 300}
+
 	engine.SetScene(scene)
 
 	// Create a simple colored square (we'll just use a texture-less sprite for now)

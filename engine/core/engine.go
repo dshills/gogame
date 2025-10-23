@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/dshills/gogame/engine/graphics"
+	"github.com/dshills/gogame/engine/input"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -14,6 +15,7 @@ type Engine struct {
 	renderer    *graphics.Renderer
 	scene       *Scene
 	time        *Time
+	inputMgr    *input.InputManager
 	running     bool
 	width       int
 	height      int
@@ -95,11 +97,15 @@ func NewEngine(title string, width, height int, fullscreen bool) (*Engine, error
 	// Create asset manager
 	assetMgr := graphics.NewAssetManager(sdlRenderer)
 
+	// Create input manager
+	inputMgr := input.NewInputManager()
+
 	return &Engine{
 		window:      window,
 		renderer:    renderer,
 		scene:       nil,
 		time:        NewTime(),
+		inputMgr:    inputMgr,
 		running:     false,
 		width:       width,
 		height:      height,
@@ -209,6 +215,9 @@ func (e *Engine) Run() error {
 
 		// Present frame
 		e.renderer.Present()
+
+		// Update input state for next frame (swap current/previous)
+		e.inputMgr.Update()
 	}
 
 	return nil
@@ -230,6 +239,15 @@ func (e *Engine) handleEvents() bool {
 					e.scene.camera.SetScreenSize(e.width, e.height)
 				}
 			}
+
+		case *sdl.KeyboardEvent:
+			e.inputMgr.ProcessKeyEvent(evt)
+
+		case *sdl.MouseButtonEvent:
+			e.inputMgr.ProcessMouseButtonEvent(evt)
+
+		case *sdl.MouseMotionEvent:
+			e.inputMgr.ProcessMouseMotionEvent(evt)
 		}
 	}
 	return true
@@ -292,6 +310,21 @@ func (e *Engine) Shutdown() {
 //	*graphics.AssetManager: Asset loading subsystem
 func (e *Engine) Assets() *graphics.AssetManager {
 	return e.assetMgr
+}
+
+// Input returns the input manager for keyboard and mouse input.
+//
+// Returns:
+//
+//	*input.InputManager: Input subsystem
+//
+// Example:
+//
+//	if engine.Input().ActionPressed(input.ActionJump) {
+//	    player.Jump()
+//	}
+func (e *Engine) Input() *input.InputManager {
+	return e.inputMgr
 }
 
 // Width returns the window width.

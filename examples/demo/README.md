@@ -1,127 +1,167 @@
-# gogame Feature Demo
+# gogame Engine - Comprehensive Feature Demo
 
-A comprehensive demonstration of all current gogame engine features.
-
-## Features Demonstrated
-
-### 1. **Sprite Rendering**
-- Loads PNG textures using the AssetManager
-- Renders sprites with SDL2 hardware acceleration
-- Demonstrates texture caching and reference counting
-
-### 2. **Transform System**
-- **Position**: Entities positioned anywhere in world space
-- **Rotation**: Smooth continuous rotation (see center player)
-- **Scale**: 2x scaled player entity demonstrates scaling
-
-### 3. **Visual Effects**
-- **Color Tinting**: Rainbow-colored orbiting enemies
-- **Alpha Blending**: Pulsating collectibles with animated transparency
-- **Sprite Flipping**: Bouncing entities with FlipH/FlipV
-
-### 4. **Custom Behaviors**
-The demo includes 5 different behavior implementations:
-
-- **RotatingBehavior**: Continuous rotation (center player)
-- **OrbitingBehavior**: Circular orbits with varying speeds (6 enemies)
-- **PulsatingBehavior**: Alpha animation (4 corner collectibles)
-- **BouncingBehavior**: Physics-based bouncing (4 bouncers)
-- **SmoothFollowBehavior**: Interpolated following (purple follower)
-
-### 5. **Camera System**
-- World-to-screen coordinate transformation
-- Camera positioning and zoom support
-- Ready for smooth camera following (easily extensible)
-
-### 6. **Entity Management**
-- 16 active entities simultaneously
-- Different layer values for z-ordering
-- Entity lifecycle management (add/remove)
-
-### 7. **Game Loop**
-- Fixed 60 FPS update rate with accumulator pattern
-- Variable render rate with vsync
-- Independent update and render phases
-
-### 8. **Scene Management**
-- Custom background color
-- Centralized entity container
-- Deferred entity removal (safe during updates)
+This demo showcases **all** current features of the gogame engine in an interactive game experience.
 
 ## Running the Demo
 
 ```bash
-# From project root
 go run examples/demo/main.go
 ```
 
-The demo will automatically:
-1. Create the `examples/demo/assets` directory
-2. Generate simple colored test textures (64x64 PNG files)
-3. Launch a 1024x768 window
-4. Run the demo until you close the window
+The demo will automatically generate placeholder textures if they don't exist.
 
-## What You'll See
+## Game Objective
 
-- **Center**: A large rotating player sprite (blue tint, 2x scale)
-- **Orbiting**: 6 rainbow-colored enemies orbiting the player at different speeds
-- **Corners**: 4 gold collectibles pulsating with alpha animation
-- **Bouncing**: 4 semi-transparent entities bouncing around the screen (some flipped)
-- **Following**: 1 purple sprite smoothly following the player
+🎯 **Collect all 4 golden collectibles while avoiding the red patrolling enemies!**
 
-**Total**: 16 entities demonstrating all engine features simultaneously at 60 FPS.
+## Controls
 
-## Code Structure
+- **WASD** or **Arrow Keys** - Move the blue player
+- **ESC** - Print debug information (position, score, entity count)
 
-The demo is self-contained in `main.go` and includes:
+## Features Demonstrated
 
-- **Texture Generation**: Creates test PNG files programmatically
-- **Behavior Implementations**: 5 custom behavior types showing the Behavior interface
-- **Entity Setup**: Demonstrates all entity configuration options
-- **Scene Configuration**: Shows scene initialization and setup
+### ✅ Core Game Loop (User Story 1)
+- Fixed 60 FPS update rate with delta time
+- Vsync rendering
+- Frame-independent physics and movement
+
+### ✅ Entity/Scene Management (User Story 2)
+- Dynamic entity creation and removal
+- Scene-based entity organization
+- Entity behaviors for custom logic
+- Layer-based rendering
+
+### ✅ Input Handling (User Story 3)
+- **Action mapping** - Multiple keys bound to actions
+- **State tracking** - Pressed, held, released detection
+- **WASD movement** - Smooth player control
+- **Keyboard input** - ESC for debug info
+
+### ✅ Asset Loading (User Story 4)
+- **Texture loading** - PNG support with caching
+- **Reference counting** - Efficient memory management
+- **Asset manager** - Centralized texture management
+- Multiple textures loaded and shared across entities
+
+### ✅ Collision Detection (User Story 5)
+- **AABB collision** - Axis-aligned bounding box testing
+- **Layer masks** - Selective collision filtering
+  - Player (layer 0) collides with enemies (layer 1) and collectibles (layer 2)
+  - Walls (layer 3) block player and enemies
+- **Trigger colliders** - Collectibles don't block movement
+- **Dynamic collision** - Real-time detection during gameplay
+- **Collision feedback** - Console messages on collision events
+
+### ✅ Sprite Rendering
+- **Texture mapping** - Sprites from loaded textures
+- **Transform support** - Position, rotation, scale
+- **Color tinting** - Different colors per sprite
+- **Alpha blending** - Semi-transparent and pulsating effects
+- **Sprite flipping** - Horizontal and vertical
+
+### ✅ Camera System
+- **World-space rendering** - Camera transforms all entities
+- **Camera positioning** - Configurable view center
+- **Zoom support** - Scalable view (currently 1.0)
+
+### ✅ Behavior System
+- **PlayerController** - Input-driven movement and rotation
+- **EnemyPatrol** - Autonomous back-and-forth movement
+- **CollectibleBehavior** - Pulsating scale and alpha animation
+- **BehaviorFunc** - Function adapter for inline behaviors
+
+## Entity Types in Demo
+
+| Entity Type | Count | Features | Collision Layer |
+|-------------|-------|----------|----------------|
+| Player | 1 | WASD control, collision detection, rotation | 0 |
+| Enemies | 3 | Patrol movement, collision detection, rotation | 1 |
+| Collectibles | 4 | Pulsating animation, trigger collision, removal on collect | 2 |
+| Walls | 6 | Static obstacles, blocking collision | 3 |
+
+## Collision Matrix
+
+```
+           Player  Enemy  Collectible  Wall
+Player        -      ✓         ✓        ✓
+Enemy         ✓      -         -        ✓
+Collectible   ✓      -         -        -
+Wall          ✓      ✓         -        -
+```
+
+## Code Highlights
+
+### Input Action Mapping
+```go
+inputMgr.BindAction(input.ActionMoveUp, input.KeyW, input.KeyArrowUp)
+inputMgr.BindAction(input.ActionMoveDown, input.KeyS, input.KeyArrowDown)
+```
+
+### Collision Detection with Layer Masks
+```go
+playerEntity.Collider.CollisionLayer = 0                    // Player layer
+playerEntity.Collider.CollisionMask = (1 << 1) | (1 << 2)  // Collides with enemies and collectibles
+
+if entity.Collider.Intersects(collectible.GetCollider(), entity.Transform, collectible.Transform) {
+    // Collision detected!
+}
+```
+
+### Asset Loading with Reference Counting
+```go
+playerTexture, _ := assets.LoadTexture("examples/demo/assets/player.png")
+// Texture is cached and reference counted automatically
+```
+
+### Custom Behaviors
+```go
+type EnemyPatrol struct {
+    Speed, MinX, MaxX, Direction float64
+}
+
+func (ep *EnemyPatrol) Update(entity *core.Entity, dt float64) {
+    entity.Transform.Position.X += ep.Direction * ep.Speed * dt
+    // Boundary checking and direction reversal
+}
+```
 
 ## Performance
 
-The demo runs at 60 FPS with 16 active entities, demonstrating:
-- Hardware-accelerated rendering
-- Efficient update loop
-- Zero-allocation game loop (after warmup)
-- Fixed timestep ensures consistent physics
+- **60 FPS** - Smooth fixed timestep updates
+- **~20 entities** - Player, enemies, collectibles, walls
+- **O(n²) collision** - Simple broad-phase (suitable for <1000 entities)
+- **Efficient rendering** - Hardware-accelerated SDL2 with vsync
 
-## Extending the Demo
+## Architecture Patterns
 
-To add your own entities:
-
-```go
-// Create sprite
-mySprite := graphics.NewSprite(myTexture)
-mySprite.SetColor(gamemath.Color{R: 255, G: 0, B: 0, A: 255})
-mySprite.Alpha = 0.8
-
-// Create entity
-myEntity := &core.Entity{
-    Active: true,
-    Transform: gamemath.Transform{
-        Position: gamemath.Vector2{X: 100, Y: 100},
-        Rotation: 0,
-        Scale:    gamemath.Vector2{X: 1.5, Y: 1.5},
-    },
-    Sprite:   mySprite,
-    Behavior: &MyCustomBehavior{}, // Optional
-    Layer:    1,
-}
-
-// Add to scene
-scene.AddEntity(myEntity)
-```
+- **Entity-Component System** - Entities with optional Sprite, Collider, Behavior
+- **Behavior Pattern** - Interface for custom entity logic
+- **Scene Management** - Deferred entity removal for safe iteration
+- **Asset Caching** - Reference-counted texture management
+- **Layer Masks** - Bitfield-based collision filtering
 
 ## Next Steps
 
-This demo shows the foundation. Future features to explore:
-- Input handling (keyboard/mouse)
-- Collision detection (AABB)
-- Audio playback
-- Particle systems
-- Sprite animations
+This demo is a complete example of the engine's capabilities. To build your own game:
 
-See the [main README](../../README.md) for full engine documentation.
+1. Study the behavior implementations (PlayerController, EnemyPatrol, etc.)
+2. Examine the collision detection setup with layer masks
+3. Look at how input actions are bound and used
+4. See how entities are created with sprites, colliders, and behaviors
+5. Understand the scene/entity lifecycle
+
+Refer to the individual example directories for focused demonstrations:
+- `examples/simple/` - Minimal engine setup
+- `examples/player-control/` - Input handling focus
+- `examples/assets/` - Asset loading focus
+- `examples/collision/` - Collision detection focus
+
+## Technical Details
+
+**Engine Version:** 0.1.0
+**Go Version:** 1.25.3+
+**Dependencies:** SDL2 (via go-sdl2)
+**Platform:** macOS (with Metal backend)
+
+Enjoy exploring the gogame engine! 🎮
