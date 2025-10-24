@@ -22,7 +22,10 @@ type Engine struct {
 	height       int
 	assetMgr     *graphics.AssetManager
 	initialized  bool
-	renderUIFunc func() // Optional UI rendering callback
+	renderUIFunc func()  // Optional UI rendering callback
+	fps          float64 // Current frames per second
+	frameCount   int     // Frame counter for FPS calculation
+	fpsTimer     float64 // Timer for FPS updates
 }
 
 // NewEngine creates a new game engine instance
@@ -229,6 +232,15 @@ func (e *Engine) Run() error {
 		// Present frame
 		e.renderer.Present()
 
+		// Update FPS counter
+		e.frameCount++
+		e.fpsTimer += dt
+		if e.fpsTimer >= 1.0 {
+			e.fps = float64(e.frameCount) / e.fpsTimer
+			e.frameCount = 0
+			e.fpsTimer = 0
+		}
+
 		// Update input state for next frame (swap current/previous)
 		e.inputMgr.Update()
 	}
@@ -277,6 +289,18 @@ func (e *Engine) handleEvents() bool {
 //	engine.Stop()
 func (e *Engine) Stop() {
 	e.running = false
+}
+
+// GetFPS returns the current frames per second.
+//
+// Returns:
+//
+//	float64: Current FPS, calculated as rolling average over 1 second
+//
+// Note: This method is not thread-safe and should only be called from the main game thread.
+// The FPS is updated once per second based on frame count.
+func (e *Engine) GetFPS() float64 {
+	return e.fps
 }
 
 // Shutdown releases all engine resources
