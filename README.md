@@ -16,6 +16,7 @@ A simple, performant 2D game engine written in Go for macOS, designed for creati
 
 **Graphics & Rendering**
 - **Sprite Rendering**: PNG/JPEG texture loading with reference counting and caching
+- **Text Rendering**: TTF font support with SDL2_ttf for in-game text display
 - **Visual Effects**: Color tinting, alpha blending, sprite flipping (horizontal/vertical)
 - **Camera System**: World-to-screen transforms with position, zoom, and smooth following
 - **Transform System**: Position, rotation, and scale with interpolation support
@@ -59,11 +60,13 @@ A simple, performant 2D game engine written in Go for macOS, designed for creati
 ### Install SDL2
 
 ```bash
-# Install SDL2 and SDL2_image via Homebrew
-brew install sdl2 sdl2_image pkg-config
+# Install SDL2, SDL2_image, and SDL2_ttf via Homebrew
+brew install sdl2 sdl2_image sdl2_ttf pkg-config
 
 # Verify installation
 pkg-config --modversion sdl2
+# Should output: 2.x.x
+pkg-config --modversion sdl2_ttf
 # Should output: 2.x.x
 ```
 
@@ -314,7 +317,22 @@ Demonstrates:
 go run examples/assets/main.go
 ```
 
-**Note**: Examples that load textures require PNG files. The `assets/` example includes test textures.
+### 8. **space-battle/** - ★ Complete Playable Game
+Full-featured space shooter demonstrating production-ready game:
+- Player input and control (WASD/Arrows + Space to shoot)
+- Score tracking and game state management
+- Text rendering for UI (score, game over)
+- Entity spawning and lifecycle management
+- Collision detection with game over logic
+- Parallax background effects
+- Restart functionality
+
+```bash
+go run examples/space-battle/main.go
+```
+See [examples/space-battle/README.md](examples/space-battle/README.md) for detailed gameplay guide.
+
+**Note**: Examples that load textures require PNG files. The `assets/` and `space-battle/` examples include test textures.
 
 ## Camera System
 
@@ -432,9 +450,25 @@ func (g *Game) Update(dt float64) {
 }
 ```
 
+**Text Rendering:**
+```go
+// Load font
+font, err := graphics.LoadFont("/System/Library/Fonts/Helvetica.ttc", 24)
+if err != nil {
+    log.Fatal(err)
+}
+defer font.Close()
+
+// Create text renderer
+textRenderer := graphics.NewTextRenderer(engine.Renderer(), font)
+
+// Draw text on screen
+err = textRenderer.DrawText("Score: 100", 10, 10, gamemath.Color{R: 255, G: 255, B: 255, A: 255})
+```
+
 ## Performance
 
-### Current Performance (on M1 MacBook Pro)
+### Current Performance (on M4 Pro, 64GB RAM)
 
 - **Rendering**: 60 FPS with 100+ sprites
 - **Input Latency**: <16ms (single frame delay)
@@ -449,20 +483,28 @@ func (g *Game) Update(dt float64) {
 - Memory stable over 1 hour runtime
 - Collision optimization with spatial partitioning (planned)
 
+**Note**: Performance metrics measured on M4 Pro with 64GB RAM. Performance may vary on different hardware configurations.
+
 ## Testing
 
 ```bash
-# Run all tests (when implemented)
+# Run all tests
 go test ./...
+
+# Run unit tests with verbose output
+go test ./tests/unit/... -v
+
+# Run with coverage
+go test -cover ./...
 
 # Run benchmarks (when implemented)
 go test -bench=. ./tests/benchmarks/
-
-# Run with coverage (when implemented)
-go test -cover ./...
 ```
 
-**Note**: Comprehensive test suite is planned but not yet implemented.
+**Current Status**:
+- ✅ **84 unit tests** for math components (Vector2, Rectangle, Transform, Color)
+- ⏳ Integration tests for engine components (planned)
+- ⏳ Benchmark tests for performance validation (planned)
 
 ## Known Issues
 
@@ -477,6 +519,7 @@ go test -cover ./...
 
 - **[Camera Guide](examples/CAMERA_GUIDE.md)** - Understanding the camera coordinate system
 - **[Demo README](examples/demo/README.md)** - Full feature showcase explanation
+- **[Space Battle README](examples/space-battle/README.md)** - Complete playable game guide
 - **[Moving README](examples/moving/README.md)** - Movement behavior patterns
 - **[Quickstart Guide](specs/001-macos-game-engine/quickstart.md)** - Getting started
 - **[API Documentation](https://pkg.go.dev/github.com/dshills/gogame)** - Generated from code comments
@@ -485,13 +528,23 @@ go test -cover ./...
 ## Troubleshooting
 
 ### SDL2 Not Found
-```
+```bash
 pkg-config --modversion sdl2
 ```
 If this fails, reinstall SDL2:
 ```bash
-brew uninstall sdl2 sdl2_image
-brew install sdl2 sdl2_image pkg-config
+brew uninstall sdl2 sdl2_image sdl2_ttf
+brew install sdl2 sdl2_image sdl2_ttf pkg-config
+```
+
+### Text Rendering Errors
+If you get errors about missing SDL2_ttf:
+```bash
+# Install SDL2_ttf
+brew install sdl2_ttf
+
+# Verify installation
+pkg-config --modversion sdl2_ttf
 ```
 
 ### Entities Not Visible
@@ -525,6 +578,7 @@ MIT License - See LICENSE file for details.
 ## Credits
 
 - Built with [SDL2](https://www.libsdl.org/) for cross-platform graphics
+- Text rendering with [SDL2_ttf](https://github.com/libsdl-org/SDL_ttf)
 - Uses [go-sdl2](https://github.com/veandco/go-sdl2) Go bindings
 - Developed with Go 1.25.3
 
